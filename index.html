@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Market heat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root {
+    color-scheme: dark;
+    --canvas: #121821;
+    --surface: #19212C;
+    --raised: #202A37;
+    --line: #2A3544;
+    --line-soft: #222C39;
+    --text: #E8EDF3;
+    --text-2: #9AA6B5;
+    --text-3: #627080;
+    --hot: #F08A3E;
+    --hot-soft: rgba(240,138,62,0.18);
+    --cold: #4FC3C0;
+    --cold-soft: rgba(79,195,192,0.18);
+    --up: #45C27E;
+    --down: #E5565B;
+    --warn: #E3B341;
+    --focus: #8FB8FF;
+    --radius: 6px;
+    --font: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --canvas: #F3F5F8; --surface: #FFFFFF; --raised: #EEF2F6; --line: #D6DCE4; --line-soft: #E4E9EF;
+      --text: #15202B; --text-2: #4E5B69; --text-3: #7B8794;
+      --hot: #D9712A; --cold: #1E9B98; --hot-soft: rgba(217,113,42,0.16); --cold-soft: rgba(30,155,152,0.16);
+      --up: #1F9D5E; --down: #CC3A41; --warn: #B8891C;
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #F3F5F8; --surface: #FFFFFF; --raised: #EEF2F6; --line: #D6DCE4; --line-soft: #E4E9EF;
+    --text: #15202B; --text-2: #4E5B69; --text-3: #7B8794;
+    --hot: #D9712A; --cold: #1E9B98; --hot-soft: rgba(217,113,42,0.16); --cold-soft: rgba(30,155,152,0.16);
+    --up: #1F9D5E; --down: #CC3A41; --warn: #B8891C;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--canvas); color: var(--text);
+    font-family: var(--font); font-size: 14px; line-height: 1.45;
+    font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .page { max-width: 1440px; margin: 0 auto; padding: 0 20px 48px; }
+
+  /* Header */
+  .top {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding: 18px 0 14px; border-bottom: 1px solid var(--line);
+  }
+  .top h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .top .meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--text-2); font-size: 13px; align-items: center; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--text-3); }
+  .dot.ok { background: var(--up); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--down); }
+  .banner {
+    margin-top: 12px; padding: 10px 14px; border-radius: var(--radius);
+    background: var(--hot-soft); border: 1px solid var(--hot); color: var(--text); font-size: 13px; display: none;
+  }
+  .banner.show { display: block; }
+
+  /* Hero: the heat band */
+  .hero { padding: 28px 0 22px; border-bottom: 1px solid var(--line); }
+  .hero-row { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; }
+  @media (max-width: 760px) { .hero-row { grid-template-columns: 1fr; } }
+  .band-wrap { position: relative; padding: 26px 0 30px; }
+  .band {
+    position: relative; height: 14px; border-radius: 7px;
+    background: linear-gradient(90deg, var(--cold) 0%, var(--cold) 22%, var(--raised) 36%, var(--raised) 64%, var(--hot) 78%, var(--hot) 100%);
+    border: 1px solid var(--line);
+  }
+  .band .tick { position: absolute; top: -8px; width: 1px; height: 30px; background: var(--line); }
+  .band .tick-label { position: absolute; top: 30px; transform: translateX(-50%); font-size: 12px; color: var(--text-3); white-space: nowrap; }
+  .band .marker {
+    position: absolute; top: -9px; width: 4px; height: 32px; border-radius: 2px; background: var(--text);
+    transform: translateX(-50%); box-shadow: 0 0 0 3px var(--canvas);
+    transition: left 400ms ease;
+  }
+  .band .marker-value {
+    position: absolute; top: -34px; transform: translateX(-50%); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap;
+  }
+  .zone-names { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .hero-side { min-width: 280px; }
+  .hero-side .label { font-size: 15px; font-weight: 500; margin: 0 0 6px; }
+  .hero-side .sub { color: var(--text-2); font-size: 13px; margin: 0; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--text-2); margin-left: 8px; vertical-align: 1px; }
+  .pill.hot { border-color: var(--hot); color: var(--hot); } .pill.cold { border-color: var(--cold); color: var(--cold); }
+
+  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0; margin-top: 18px; border-top: 1px solid var(--line-soft); }
+  .strip > div { padding: 12px 16px 10px 0; border-right: 1px solid var(--line-soft); margin-right: 16px; }
+  .strip > div:last-child { border-right: 0; }
+  .strip .k { font-size: 12px; color: var(--text-2); margin-bottom: 2px; }
+  .strip .v { font-size: 17px; font-weight: 500; }
+  .strip .n { font-size: 12px; color: var(--text-3); }
+  @media (max-width: 640px) { .strip > div { border-right: 0; margin-right: 0; } .pane .title { display: none; } }
+
+  /* Sections */
+  section { padding: 22px 0 8px; }
+  section h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  section .lead { color: var(--text-2); font-size: 13px; margin: 0 0 14px; max-width: 72ch; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .two > section { min-width: 0; }
+  @media (max-width: 1024px) { .two { grid-template-columns: 1fr; } }
+  .tbl-wrap.tall { max-height: 540px; overflow-y: auto; }
+
+  /* Charts */
+  .controls { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .seg button { background: transparent; border: 0; padding: 5px 11px; font-size: 13px; color: var(--text-2); cursor: pointer; border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
+  .toggles { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); }
+  .toggles label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .toggles input { accent-color: var(--text-2); }
+  .hint { font-size: 12px; color: var(--text-3); }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin-bottom: 10px; }
+  .pane .chart { height: 300px; }
+  .pane.short .chart { height: 180px; }
+  .pane .readout {
+    position: absolute; left: 10px; top: 6px; z-index: 2; display: flex; gap: 14px; font-size: 12px; color: var(--text-2);
+    pointer-events: none; flex-wrap: wrap; padding: 2px 6px; border-radius: 4px; background: var(--surface);
+  }
+  .pane .readout b { color: var(--text); font-weight: 500; }
+  .pane .title { position: absolute; right: 78px; top: 8px; z-index: 2; font-size: 12px; color: var(--text-3); pointer-events: none; }
+  .explore-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--text-2); flex-wrap: wrap; }
+  select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 8px; }
+
+  /* Tables */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line-soft); white-space: nowrap; vertical-align: top; }
+  th { color: var(--text-2); font-weight: 500; position: sticky; top: 0; background: var(--surface); }
+  th.num, td.num { text-align: right; }
+  th.sort { cursor: pointer; user-select: none; }
+  th.sort::after { content: ""; }
+  th.sort[data-dir="desc"]::after { content: " \2193"; } th.sort[data-dir="asc"]::after { content: " \2191"; }
+  tr:last-child td { border-bottom: 0; }
+  td.wrap { white-space: normal; min-width: 220px; color: var(--text-2); }
+  .pos { color: var(--up); } .neg { color: var(--down); } .mute { color: var(--text-3); }
+  .status { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--text-2); }
+  .status.active { border-color: var(--up); color: var(--up); }
+  .status.dropped { border-color: var(--line); color: var(--text-3); }
+  .status.watch { border-color: var(--warn); color: var(--warn); }
+  .status.ok { border-color: var(--up); color: var(--up); } .status.stale { border-color: var(--down); color: var(--down); } .status.lag { border-color: var(--warn); color: var(--warn); }
+  .bar { display: inline-block; width: 90px; height: 6px; border-radius: 3px; background: var(--raised); position: relative; vertical-align: middle; margin-left: 8px; }
+  .bar span { position: absolute; top: 0; height: 100%; border-radius: 3px; }
+  .empty { padding: 18px 14px; color: var(--text-2); font-size: 13px; border: 1px dashed var(--line); border-radius: var(--radius); }
+
+  /* Setups */
+  .setups { display: grid; gap: 10px; }
+  .setup { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
+  .setup .tier { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 13px; border: 1px solid var(--line); }
+  .setup .tier.A { border-color: var(--hot); color: var(--hot); } .setup .tier.B { border-color: var(--warn); color: var(--warn); }
+  .setup .head { font-weight: 500; } .setup .body { color: var(--text-2); font-size: 13px; margin-top: 2px; }
+  .setup .num { font-size: 15px; font-weight: 500; text-align: right; }
+  .setup .num small { display: block; color: var(--text-3); font-weight: 400; font-size: 12px; }
+
+  /* Research log */
+  .log { border-left: 2px solid var(--line); padding-left: 14px; display: grid; gap: 12px; }
+  .log .item { position: relative; }
+  .log .item::before { content: ""; position: absolute; left: -19px; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+  .log .item.added::before { background: var(--up); } .log .item.dropped::before { background: var(--down); } .log .item.changed::before { background: var(--warn); }
+  .log .when { font-size: 12px; color: var(--text-3); }
+  .log .what { font-weight: 500; }
+  .log .why { color: var(--text-2); font-size: 13px; max-width: 72ch; }
+
+  .mono { font-family: var(--mono); font-size: 12px; color: var(--text-2); white-space: pre-wrap; word-break: break-word; }
+  .foot { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 12px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
+  .foot button, .foot a { background: none; border: 0; padding: 0; color: var(--text-2); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <h1>Market heat</h1>
+    <div class="meta">
+      <span id="m-health"><span class="dot"></span>Checking data</span>
+      <span id="m-panel">Panel end: –</span>
+      <span id="m-gen">Generated: –</span>
+    </div>
+  </header>
+  <div id="banner" class="banner"></div>
+
+  <div class="hero">
+    <div class="hero-row">
+      <div>
+        <div class="band-wrap">
+          <div class="band" id="band">
+            <div class="tick" style="left:0%"></div><div class="tick-label" style="left:0%">-1</div>
+            <div class="tick" style="left:30%"></div><div class="tick-label" style="left:30%" id="tick-cold">-0.4</div>
+            <div class="tick" style="left:50%"></div><div class="tick-label" style="left:50%">0</div>
+            <div class="tick" style="left:70%"></div><div class="tick-label" style="left:70%" id="tick-hot">+0.4</div>
+            <div class="tick" style="left:100%"></div><div class="tick-label" style="left:100%">+1</div>
+            <div class="marker-value" id="marker-value" style="left:50%">0.00</div>
+            <div class="marker" id="marker" style="left:50%"></div>
+          </div>
+        </div>
+        <div class="zone-names"><span>Cold: leverage washed out, no reliable edge</span><span>Hot: momentum running, returns have concentrated here</span></div>
+      </div>
+      <div class="hero-side">
+        <p class="label" id="h-label">–<span class="pill" id="h-zone">neutral</span></p>
+        <p class="sub" id="h-sub">–</p>
+      </div>
+    </div>
+    <div class="strip">
+      <div><div class="k">BTC, next 10 days</div><div class="v" id="s-fc">–</div><div class="n" id="s-fc-n">–</div></div>
+      <div><div class="k">Forecast hit rate, live</div><div class="v" id="s-hit">–</div><div class="n" id="s-hit-n">–</div></div>
+      <div><div class="k">Last crossing</div><div class="v" id="s-cross">–</div><div class="n" id="s-cross-n">–</div></div>
+      <div><div class="k">Open setups</div><div class="v" id="s-setups">–</div><div class="n" id="s-setups-n">–</div></div>
+      <div><div class="k">Data</div><div class="v" id="s-data">–</div><div class="n" id="s-data-n">–</div></div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Price, heat and forecast</h2>
+    <p class="lead">Drag to pan, scroll to zoom, all panes move together. Markers show the days heat crossed into or out of the hot and cold zones.</p>
+    <div class="controls">
+      <div class="seg" id="ranges">
+        <button data-days="90">3M</button><button data-days="180">6M</button><button data-days="365" aria-pressed="true">1Y</button><button data-days="1095">3Y</button><button data-days="0">All</button>
+      </div>
+      <div class="seg"><button id="logbtn" aria-pressed="true">Log price</button></div>
+      <div class="toggles" id="overlays"></div>
+      <span class="hint">Overlay a factor on the heat pane</span>
+    </div>
+    <div class="pane"><div class="readout" id="ro-price"></div><div class="title">BTC and ETH, USD</div><div class="chart" id="c-price"></div></div>
+    <div class="pane short"><div class="readout" id="ro-heat"></div><div class="title">Heat, -1 to +1</div><div class="chart" id="c-heat"></div></div>
+    <div class="pane short"><div class="readout" id="ro-fc"></div><div class="title">Expected BTC return, next 10 days</div><div class="chart" id="c-fc"></div></div>
+  </section>
+
+  <section>
+    <h2>Explore any series</h2>
+    <div class="explore-head"><label for="explore-sel">Series</label><select id="explore-sel"></select><span class="hint" id="explore-n"></span></div>
+    <div class="pane short"><div class="readout" id="ro-ex"></div><div class="chart" id="c-explore"></div></div>
+  </section>
+
+  <section>
+    <h2>Factors</h2>
+    <p class="lead" id="factors-lead">Each factor is a rolling z-score squashed to -1 to +1. Out-of-sample spread is top minus bottom quintile, 10-day forward return, second half of the history.</p>
+    <div class="tbl-wrap"><table id="t-factors"></table></div>
+  </section>
+
+  <section>
+    <h2>Alt ranking</h2>
+    <p class="lead" id="alts-lead">Cross-sectional rank of the alt universe by expected 10-day return against BTC. Click a column to sort.</p>
+    <div id="alts-box"></div>
+  </section>
+
+  <div class="two">
+    <section>
+      <h2>Open setups</h2>
+      <p class="lead">A setup appears only when the model is in a zone where it held out of sample and an independent confirmation agrees.</p>
+      <div id="setups-box"></div>
+    </section>
+    <section>
+      <h2>Forecast ledger</h2>
+      <p class="lead" id="ledger-lead">Every forecast the model made, scored against what happened. No conclusions before 30 non-overlapping observations.</p>
+      <div id="ledger-box"></div>
+    </section>
+  </div>
+
+  <div class="two">
+    <section>
+      <h2>Data health</h2>
+      <p class="lead">Last observation per series. The daily refresh fails if the panel is more than two days old.</p>
+      <div id="health-box"></div>
+    </section>
+    <section>
+      <h2>Research decisions</h2>
+      <p class="lead">What was tested, what was admitted or dropped, and why.</p>
+      <div id="research-box"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Jobs</h2>
+    <div id="jobs-box" class="mono"></div>
+  </section>
+
+  <div class="foot">
+    <span id="foot-note">Reads data.json written by the daily refresh.</span>
+    <span><a id="dl" href="data.json" download>Download data.json</a> &nbsp; <button id="theme">Switch theme</button></span>
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = (s) => document.querySelector(s);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = {
+  pct: (x, d = 2) => (x == null || isNaN(x)) ? '–' : (x > 0 ? '+' : '') + Number(x).toFixed(d) + '%',
+  num: (x, d = 2) => (x == null || isNaN(x)) ? '–' : Number(x).toFixed(d),
+  sgn: (x, d = 2) => (x == null || isNaN(x)) ? '–' : (x > 0 ? '+' : '') + Number(x).toFixed(d),
+  usd: (x) => (x == null || isNaN(x)) ? '–' : Number(x).toLocaleString('en-US', { maximumFractionDigits: x < 10 ? 3 : 0 }),
+  date: (s) => s || '–',
+};
+const cls = (x) => x > 0 ? 'pos' : x < 0 ? 'neg' : 'mute';
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function addDays(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000); }
+
+/* ---------- sample data (used only when data.json is missing) ---------- */
+function sampleData() {
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const gauss = () => { let u = 0, v = 0; while (u === 0) u = rnd(); while (v === 0) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const today = new Date(); today.setUTCDate(today.getUTCDate() - 1);
+  const end = today.toISOString().slice(0, 10);
+  const n = daysBetween('2020-01-01', end) + 1;
+  const date = [], btc = [], eth = [], heat = [], fc = [], f1 = [], f2 = [], f3 = [], f4 = [];
+  let p = 7200, e = 130, h = 0, mom = 0;
+  for (let i = 0; i < n; i++) {
+    const d = addDays('2020-01-01', i); date.push(d);
+    const cycle = Math.sin(i / 230) * 0.6 + Math.sin(i / 57) * 0.25;
+    mom = mom * 0.97 + gauss() * 0.03;
+    h = Math.max(-1, Math.min(1, h * 0.93 + (cycle + mom * 6) * 0.07 + gauss() * 0.03));
+    heat.push(+h.toFixed(3));
+    const drift = 0.0009 + h * 0.0025;
+    p *= Math.exp(drift + gauss() * 0.032); e *= Math.exp(drift * 1.2 + gauss() * 0.041);
+    btc.push(+p.toFixed(1)); eth.push(+e.toFixed(2));
+    fc.push(+((h * 2.4 + 1.0 + gauss() * 0.6)).toFixed(2));
+    f1.push(+Math.max(-1, Math.min(1, h * 0.9 + gauss() * 0.2)).toFixed(3));
+    f2.push(+Math.max(-1, Math.min(1, Math.sin(i / 90) * 0.6 + gauss() * 0.25)).toFixed(3));
+    f3.push(+Math.max(-1, Math.min(1, h * 0.7 + gauss() * 0.3)).toFixed(3));
+    f4.push(+Math.max(-1, Math.min(1, gauss() * 0.5)).toFixed(3));
+  }
+  const ledger = [];
+  for (let i = n - 120; i < n - 10; i += 10) {
+    const f = fc[i], r = (btc[i + 10] / btc[i] - 1) * 100;
+    ledger.push({ date: date[i], heat: heat[i], forecast: f, realized: +r.toFixed(2), hit: Math.sign(f) === Math.sign(r) });
+  }
+  const alts = ['SOL', 'HYPE', 'SUI', 'LINK', 'AVAX', 'DOGE', 'XRP', 'ADA', 'TON', 'ARB', 'OP', 'APT', 'NEAR', 'INJ', 'TIA', 'SEI'];
+  const alt_ranking = alts.map((s) => ({ symbol: s, score: +(gauss()).toFixed(2), expected_10d: +(gauss() * 3 + 1).toFixed(2), rs_30: +(gauss() * 8).toFixed(1), funding_7d: +(gauss() * 0.01 + 0.005).toFixed(4), oi_change_7d: +(gauss() * 12).toFixed(1), price: +(Math.exp(gauss() * 1.5 + 1)).toFixed(3) }))
+    .sort((a, b) => b.score - a.score).map((r, i) => ({ rank: i + 1, ...r }));
+  return {
+    sample: true,
+    generated_at: new Date().toISOString(),
+    panel_end: end,
+    regime: { score: heat[n - 1], hot: 0.4, cold: -0.4, label: 'Momentum and volatility, four factors', change_7d: +(heat[n - 1] - heat[n - 8]).toFixed(2), note: 'Hot zone above +0.4 has held out of sample. Cold zone and middle carry no reliable edge.' },
+    forecast: { btc_10d: fc[n - 1], reliable: Math.abs(heat[n - 1]) > 0.4, zone_hit_rate: 0.58, zone_n: 112 },
+    series: { date, btc, eth, heat, forecast_btc_10d: fc, factors: { btc_ret_30: f1, btc_vol_z90: f2, btc_trend_stretch: f3, eth_funding_z30: f4 } },
+    factors: [
+      { name: 'btc_ret_30', label: 'BTC 30-day momentum', measures: 'How hard price has already been running', weight: 0.25, learned: 0.143, value: f1[n - 1], oos_btc: 3.68, oos_alt: 8.39, n: 236, sign_holds: true, status: 'active' },
+      { name: 'btc_vol_z90', label: 'BTC volatility regime', measures: 'Realized vol against its own 90-day history', weight: 0.25, learned: 0.021, value: f2[n - 1], oos_btc: 1.04, oos_alt: 3.57, n: 242, sign_holds: true, status: 'active' },
+      { name: 'btc_trend_stretch', label: 'Trend stretch', measures: 'Distance of price above its 50-day average', weight: 0.25, learned: -0.096, value: f3[n - 1], oos_btc: 1.72, oos_alt: 5.01, n: 234, sign_holds: true, status: 'active' },
+      { name: 'eth_funding_z30', label: 'ETH funding momentum', measures: '30-day z-score of ETH perp funding', weight: 0.25, learned: 0.012, value: f4[n - 1], oos_btc: 1.38, oos_alt: 1.87, n: 245, sign_holds: true, status: 'active' },
+      { name: 'basis_btc_z30', label: 'Basis momentum', measures: '30-day z-score of the 90-day annualized basis', weight: 0, learned: null, value: null, oos_btc: 1.88, oos_alt: 3.46, n: 200, sign_holds: false, status: 'dropped' },
+      { name: 'basis_gap_btc_eth', label: 'BTC vs ETH basis gap', measures: 'BTC basis relative to ETH basis', weight: 0, learned: null, value: null, oos_btc: -0.51, oos_alt: 0.07, n: 197, sign_holds: false, status: 'dropped' },
+      { name: 'dispersion_14', label: 'Alt dispersion', measures: 'Cross-sectional spread of 14-day alt returns', weight: 0, learned: null, value: null, oos_btc: -0.59, oos_alt: 2.97, n: 242, sign_holds: false, status: 'dropped' },
+    ],
+    alt_ranking,
+    setups: [],
+    ledger: { rows: ledger },
+    data_health: [
+      { series: 'BTC, ETH spot price', source: 'Coinalyze', venue: 'Binance', last: end, rows: n, status: 'ok' },
+      { series: 'Perp funding, 20 names', source: 'Coinalyze', venue: 'Binance', last: end, rows: n, status: 'ok' },
+      { series: 'Open interest, 20 names', source: 'Coinalyze', venue: 'Binance', last: end, rows: n, status: 'ok' },
+      { series: 'Annualized basis 90d', source: 'Laevitas', venue: 'Deribit', last: addDays(end, -1), rows: n - 430, status: 'lag' },
+      { series: 'OI-weighted funding', source: 'Laevitas', venue: 'cross-venue', last: addDays(end, -1), rows: 2033, status: 'lag' },
+      { series: 'Futures OI totals', source: 'Laevitas', venue: 'all', last: '–', rows: 0, status: 'stale', note: 'get_market_positioning_history returns a server error' },
+    ],
+    research: [
+      { date: end, decision: 'dropped', what: 'basis_btc_z30, basis_gap_btc_eth, dispersion_14 removed from the score', why: 'Sign flips on the full history through today. Four-factor model out of sample: BTC +2.66%, alts +6.43% against +2.30% and +6.91% with seven. Kept in the weekly retest.' },
+      { date: end, decision: 'rejected', what: 'Cross-venue OI-weighted funding, 30-day z-score', why: 'Not capped like Binance funding, but flips sign on BTC: -0.18% first half, +0.59% second, n=201 each.' },
+      { date: end, decision: 'changed', what: 'Panel loader drops any day missing price or funding; single writer is the daily refresh', why: 'Interactive session and the refresh job both rewrote the panel within an hour.' },
+      { date: addDays(end, -1), decision: 'rejected', what: 'TA library: MA slope 20d, ATR regime', why: 'Both widen the gap slightly but correlate 0.83 and 0.91 with factors already in. Kept as standalone scanner confirmations.' },
+    ],
+    jobs: [
+      { name: 'regime-daily-refresh', last_run: end + ' 05:30Z', status: 'OK', line: 'STATUS OK regime-daily-refresh panel_end=' + end + ' age=1d files=results/' + end + '_refresh.json' },
+      { name: 'regime-hourly', last_run: end + ' 16:00Z', status: 'OK', line: 'STATUS OK regime-hourly panel_end=' + end + ' age=1d files=signals/ledger.csv' },
+      { name: 'regime-daily-digest', last_run: end + ' 06:00Z', status: 'OK', line: 'STATUS OK regime-daily-digest panel_end=' + end + ' age=1d files=results/' + end + '_digest.json' },
+    ],
+  };
+}
+
+/* ---------- loading ---------- */
+async function loadData() {
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch('data.json?t=' + Date.now(), { cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (!d.series || !d.series.date) throw new Error('data.json has no series.date');
+    return d;
+  } catch (err) {
+    const d = sampleData(); d.sample = true; d.load_error = String(err.message || err); return d;
+  }
+}
+
+/* ---------- charts ---------- */
+const LC = window.LightweightCharts;
+const charts = [];
+let syncing = false;
+function baseOpts() {
+  return {
+    autoSize: true,
+    layout: { background: { type: 'solid', color: css('--surface') }, textColor: css('--text-2'), fontFamily: css('--font'), fontSize: 11 },
+    grid: { vertLines: { color: css('--line-soft') }, horzLines: { color: css('--line-soft') } },
+    rightPriceScale: { borderColor: css('--line'), scaleMargins: { top: 0.18, bottom: 0.08 } },
+    timeScale: { borderColor: css('--line'), rightOffset: 3, minBarSpacing: 0.5 },
+    crosshair: { mode: LC.CrosshairMode.Normal, vertLine: { color: css('--text-3'), labelBackgroundColor: css('--raised') }, horzLine: { color: css('--text-3'), labelBackgroundColor: css('--raised') } },
+    handleScroll: true, handleScale: true,
+    localization: { locale: 'en-US', dateFormat: 'dd MMM yyyy' },
+  };
+}
+function makeChart(id) {
+  const chart = LC.createChart(document.getElementById(id), baseOpts());
+  chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+    if (syncing || !range) return; syncing = true;
+    charts.forEach((c) => { if (c !== chart) c.timeScale().setVisibleLogicalRange(range); });
+    syncing = false;
+  });
+  charts.push(chart);
+  return chart;
+}
+function toSeries(dates, values) {
+  const out = [];
+  for (let i = 0; i < dates.length; i++) { const v = values[i]; if (v != null && !isNaN(v)) out.push({ time: dates[i], value: v }); }
+  return out;
+}
+function crossings(dates, heat, hot, cold) {
+  const marks = [];
+  for (let i = 1; i < heat.length; i++) {
+    const a = heat[i - 1], b = heat[i]; if (a == null || b == null) continue;
+    if (a < hot && b >= hot) marks.push({ time: dates[i], type: 'hot' });
+    if (a > cold && b <= cold) marks.push({ time: dates[i], type: 'cold' });
+  }
+  return marks;
+}
+
+/* ---------- render ---------- */
+function renderHeader(d) {
+  const today = new Date().toISOString().slice(0, 10);
+  const age = d.panel_end ? daysBetween(d.panel_end, today) : null;
+  const healthEl = $('#m-health');
+  let state = 'ok', text = 'Data current';
+  if (d.sample) { state = 'warn'; text = 'Sample data'; }
+  else if (age > 2) { state = 'bad'; text = 'Panel ' + age + ' days old'; }
+  else if (age > 0) { state = 'ok'; text = 'Data ' + age + 'd old, within limit'; }
+  healthEl.innerHTML = '<span class="dot ' + state + '"></span>' + text;
+  $('#m-panel').textContent = 'Panel end: ' + fmt.date(d.panel_end);
+  $('#m-gen').textContent = 'Generated: ' + (d.generated_at ? d.generated_at.replace('T', ' ').slice(0, 16) + ' UTC' : '–');
+  if (d.sample) {
+    $('#banner').textContent = 'Showing sample data. data.json was not found next to this page' + (d.load_error ? ' (' + d.load_error + ')' : '') + '. Once the daily refresh writes it, this page shows the live model.';
+    $('#banner').classList.add('show');
+    $('#foot-note').textContent = 'Sample data generated in the browser. Layout and behaviour are final; the numbers are not.';
+  }
+}
+function renderHero(d) {
+  const r = d.regime || {}; const hot = r.hot ?? 0.4, cold = r.cold ?? -0.4;
+  const s = r.score ?? 0; const left = ((s + 1) / 2) * 100;
+  $('#marker').style.left = left + '%'; $('#marker-value').style.left = left + '%';
+  $('#marker-value').textContent = fmt.sgn(s, 2);
+  $('#tick-hot').textContent = fmt.sgn(hot, 1); $('#tick-cold').textContent = fmt.sgn(cold, 1);
+  $('#tick-hot').style.left = $('#band .tick:nth-of-type(7)').style.left = ((hot + 1) / 2 * 100) + '%';
+  $('#tick-cold').style.left = $('#band .tick:nth-of-type(3)').style.left = ((cold + 1) / 2 * 100) + '%';
+  const zone = s >= hot ? 'hot' : s <= cold ? 'cold' : 'neutral';
+  $('#h-zone').textContent = zone; $('#h-zone').className = 'pill ' + zone;
+  $('#h-label').firstChild.textContent = r.label || 'Regime score';
+  const chg = r.change_7d != null ? (' Moved ' + fmt.sgn(r.change_7d, 2) + ' over 7 days.') : '';
+  $('#h-sub').textContent = (r.note || '').replace(/\s+$/, '') + chg;
+
+  const f = d.forecast || {};
+  $('#s-fc').textContent = fmt.pct(f.btc_10d, 2); $('#s-fc').className = 'v ' + cls(f.btc_10d);
+  $('#s-fc-n').textContent = f.reliable ? 'Heat elevated: this zone has held out of sample' : 'Middle zone: forecast has not held up here';
+  const rows = (d.ledger && d.ledger.rows) || [];
+  const scored = rows.filter((x) => x.hit != null);
+  const hits = scored.filter((x) => x.hit).length;
+  $('#s-hit').textContent = scored.length ? Math.round(100 * hits / scored.length) + '%' : '–';
+  $('#s-hit-n').textContent = scored.length + ' of 30 observations' + (scored.length < 30 ? ', no conclusion yet' : '');
+  const marks = crossings(d.series.date, d.series.heat, hot, cold);
+  const last = marks[marks.length - 1];
+  $('#s-cross').textContent = last ? last.time : '–';
+  $('#s-cross-n').textContent = last ? ('into the ' + last.type + ' zone') : 'no crossings in history';
+  const setups = d.setups || [];
+  $('#s-setups').textContent = setups.length; $('#s-setups-n').textContent = setups.length ? setups.filter((x) => x.tier === 'A').length + ' tier A' : 'nothing qualifies';
+  const dh = d.data_health || []; const stale = dh.filter((x) => x.status === 'stale').length;
+  $('#s-data').textContent = dh.length ? (dh.length - stale) + ' of ' + dh.length + ' series' : '–';
+  $('#s-data-n').textContent = stale ? stale + ' stale' : 'all within limit';
+}
+
+const overlaySeries = {};
+function renderCharts(d) {
+  const S = d.series; const dates = S.date;
+  const hot = d.regime?.hot ?? 0.4, cold = d.regime?.cold ?? -0.4;
+  const price = makeChart('c-price');
+  const btcS = price.addLineSeries({ color: css('--text'), lineWidth: 1.5, priceFormat: { type: 'price', precision: 0, minMove: 1 }, title: 'BTC' });
+  btcS.setData(toSeries(dates, S.btc));
+  let ethS = null;
+  if (S.eth) {
+    ethS = price.addLineSeries({ color: css('--text-3'), lineWidth: 1, priceScaleId: 'eth', priceFormat: { type: 'price', precision: 0, minMove: 1 }, title: 'ETH', priceLineVisible: false, lastValueVisible: false });
+    ethS.setData(toSeries(dates, S.eth));
+    price.priceScale('eth').applyOptions({ scaleMargins: { top: 0.18, bottom: 0.08 } });
+  }
+  const marks = crossings(dates, S.heat, hot, cold);
+  btcS.setMarkers(marks.map((m) => m.type === 'hot'
+    ? { time: m.time, position: 'aboveBar', color: css('--hot'), shape: 'arrowDown', size: 1 }
+    : { time: m.time, position: 'belowBar', color: css('--cold'), shape: 'arrowUp', size: 1 }));
+  const setLog = (on) => { price.priceScale('right').applyOptions({ mode: on ? LC.PriceScaleMode.Logarithmic : LC.PriceScaleMode.Normal }); if (ethS) price.priceScale('eth').applyOptions({ mode: on ? LC.PriceScaleMode.Logarithmic : LC.PriceScaleMode.Normal }); };
+  setLog(true);
+  $('#logbtn').addEventListener('click', (e) => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); setLog(on); });
+
+  const heat = makeChart('c-heat');
+  const heatS = heat.addBaselineSeries({
+    baseValue: { type: 'price', price: 0 }, lineWidth: 1.5,
+    topLineColor: css('--hot'), topFillColor1: css('--hot-soft'), topFillColor2: 'rgba(0,0,0,0)',
+    bottomLineColor: css('--cold'), bottomFillColor1: 'rgba(0,0,0,0)', bottomFillColor2: css('--cold-soft'),
+    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+  });
+  heatS.setData(toSeries(dates, S.heat));
+  heatS.createPriceLine({ price: hot, color: css('--hot'), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: 'hot' });
+  heatS.createPriceLine({ price: cold, color: css('--cold'), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: 'cold' });
+  heatS.applyOptions({ autoscaleInfoProvider: () => ({ priceRange: { minValue: -1, maxValue: 1 } }) });
+
+  const fc = makeChart('c-fc');
+  const fcS = fc.addHistogramSeries({ priceFormat: { type: 'custom', formatter: (v) => fmt.pct(v, 1) }, base: 0 });
+  const fcVals = S.forecast_btc_10d || [];
+  fcS.setData(dates.map((t, i) => fcVals[i] == null || isNaN(fcVals[i]) ? null : { time: t, value: fcVals[i], color: fcVals[i] >= 0 ? css('--up') : css('--down') }).filter(Boolean));
+  fcS.createPriceLine({ price: 0, color: css('--line'), lineWidth: 1, axisLabelVisible: false });
+
+  // overlays
+  const facs = S.factors || {}; const keys = Object.keys(facs);
+  const palette = ['#C9A0DC', '#8FB8FF', '#F2D06B', '#9BE39B', '#FF9BB3', '#A0D8EF'];
+  const box = $('#overlays');
+  keys.forEach((k, i) => {
+    const id = 'ov-' + k;
+    const lab = document.createElement('label');
+    lab.innerHTML = '<input type="checkbox" id="' + esc(id) + '"><span style="color:' + palette[i % palette.length] + '">&#9644;</span> ' + esc(k);
+    box.appendChild(lab);
+    lab.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) { const s = heat.addLineSeries({ color: palette[i % palette.length], lineWidth: 1, priceLineVisible: false, lastValueVisible: false }); s.setData(toSeries(dates, facs[k])); overlaySeries[k] = s; }
+      else if (overlaySeries[k]) { heat.removeSeries(overlaySeries[k]); delete overlaySeries[k]; }
+    });
+  });
+  if (!keys.length) $('#overlays').parentElement.querySelector('.hint').textContent = 'No factor series in data.json';
+
+  // readouts
+  const idx = new Map(dates.map((t, i) => [t, i]));
+  function readout(param) {
+    const t = param.time; const i = t != null ? idx.get(typeof t === 'string' ? t : (t.year ? `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` : t)) : null;
+    const last = dates.length - 1; const j = i == null ? last : i;
+    $('#ro-price').innerHTML = '<span><b>' + dates[j] + '</b></span><span>BTC <b>' + fmt.usd(S.btc[j]) + '</b></span>' + (S.eth ? '<span>ETH <b>' + fmt.usd(S.eth[j]) + '</b></span>' : '');
+    let ov = ''; for (const k in overlaySeries) ov += '<span>' + esc(k) + ' <b>' + fmt.sgn(facs[k][j], 2) + '</b></span>';
+    $('#ro-heat').innerHTML = '<span>Heat <b>' + fmt.sgn(S.heat[j], 2) + '</b></span>' + ov;
+    $('#ro-fc').innerHTML = '<span>Expected 10d <b>' + fmt.pct(fcVals[j], 2) + '</b></span>';
+  }
+  readout({});
+  const timeKey = (t) => typeof t === 'string' ? t : (t && t.year ? `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` : null);
+  const mains = [[price, btcS, S.btc], [heat, heatS, S.heat], [fc, fcS, fcVals]];
+  let xsync = false;
+  mains.forEach(([c]) => c.subscribeCrosshairMove((p) => {
+    if (xsync) return; xsync = true;
+    readout(p);
+    const key = timeKey(p.time); const i = key != null ? idx.get(key) : null;
+    mains.forEach(([o, s, vals]) => {
+      if (o === c) return;
+      if (i == null || vals[i] == null) o.clearCrosshairPosition(); else o.setCrosshairPosition(vals[i], p.time, s);
+    });
+    xsync = false;
+  }));
+
+  // ranges
+  const lastDate = dates[dates.length - 1];
+  function setRange(days) {
+    if (!days) { charts.forEach((c) => c.timeScale().fitContent()); return; }
+    const from = addDays(lastDate, -days);
+    charts.forEach((c) => c.timeScale().setVisibleRange({ from, to: lastDate }));
+  }
+  $('#ranges').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    $('#ranges').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true');
+    setRange(+b.dataset.days);
+  }));
+  setTimeout(() => setRange(365), 50);
+
+  // explore
+  const ex = makeChart('c-explore');
+  let exS = null;
+  const flat = {}; for (const k of Object.keys(S)) { if (k === 'date' || k === 'factors') continue; if (Array.isArray(S[k])) flat[k] = S[k]; }
+  for (const k of keys) flat['factor: ' + k] = facs[k];
+  const sel = $('#explore-sel'); Object.keys(flat).forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o); });
+  function showExplore(k) {
+    if (exS) ex.removeSeries(exS);
+    const vals = flat[k]; const data = toSeries(dates, vals);
+    const small = Math.abs(data[data.length - 1]?.value ?? 1) < 10;
+    exS = ex.addLineSeries({ color: css('--text'), lineWidth: 1.2, priceFormat: { type: 'price', precision: small ? 3 : 0, minMove: small ? 0.001 : 1 } });
+    exS.setData(data);
+    const v = data[data.length - 1];
+    $('#ro-ex').innerHTML = '<span><b>' + esc(k) + '</b></span><span>latest <b>' + (v ? fmt.num(v.value, Math.abs(v.value) < 10 ? 3 : 1) : '–') + '</b></span>';
+    $('#explore-n').textContent = data.length + ' observations, ' + (data[0]?.time || '') + ' to ' + (v?.time || '');
+    ex.timeScale().setVisibleLogicalRange(price.timeScale().getVisibleLogicalRange());
+  }
+  sel.addEventListener('change', () => showExplore(sel.value));
+  if (Object.keys(flat).length) showExplore(sel.value);
+}
+
+function renderFactors(d) {
+  const f = d.factors || []; if (!f.length) { $('#t-factors').outerHTML = '<div class="empty">No factor table in data.json.</div>'; return; }
+  const maxC = Math.max(0.0001, ...f.map((x) => Math.abs((x.weight || 0) * (x.value || 0))));
+  const rows = f.map((x) => {
+    const c = (x.weight || 0) * (x.value || 0); const w = Math.min(100, Math.abs(c) / maxC * 50);
+    const bar = x.status === 'active' ? '<span class="bar"><span style="left:' + (c >= 0 ? 50 : 50 - w) + '%;width:' + w + '%;background:' + (c >= 0 ? 'var(--hot)' : 'var(--cold)') + '"></span></span>' : '';
+    return '<tr><td><div>' + esc(x.label || x.name) + '</div><div class="mute" style="font-size:12px">' + esc(x.name) + '</div></td>' +
+      '<td class="wrap">' + esc(x.measures) + '</td>' +
+      '<td class="num">' + (x.weight != null ? Math.round(x.weight * 100) + '%' : '–') + '</td>' +
+      '<td class="num">' + (x.learned != null ? fmt.sgn(x.learned, 3) : '–') + '</td>' +
+      '<td class="num ' + cls(x.value) + '">' + (x.value != null ? fmt.sgn(x.value, 2) : '–') + bar + '</td>' +
+      '<td class="num ' + cls(x.oos_btc) + '">' + fmt.pct(x.oos_btc, 2) + '</td>' +
+      '<td class="num ' + cls(x.oos_alt) + '">' + fmt.pct(x.oos_alt, 2) + '</td>' +
+      '<td class="num">' + (x.n ?? '–') + '</td>' +
+      '<td>' + (x.sign_holds === true ? 'yes' : x.sign_holds === false ? '<span class="neg">flips</span>' : '–') + '</td>' +
+      '<td><span class="status ' + esc(x.status) + '">' + esc(x.status) + '</span></td></tr>';
+  }).join('');
+  $('#t-factors').innerHTML = '<thead><tr><th>Factor</th><th>What it measures</th><th class="num">Weight</th><th class="num">Learned</th><th class="num">Now</th><th class="num">OOS BTC</th><th class="num">OOS alts</th><th class="num">n</th><th>Sign</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody>';
+}
+
+function renderAlts(d) {
+  const rows = d.alt_ranking || [];
+  if (!rows.length) { $('#alts-box').innerHTML = '<div class="empty">No alt ranking yet. It appears once the per-asset panel and the cross-sectional model exist.</div>'; return; }
+  const cols = [['rank', '#', 'num'], ['symbol', 'Asset', ''], ['score', 'Score', 'num'], ['expected_10d', 'Expected 10d', 'pct'], ['rs_30', 'RS 30d vs BTC', 'pct'], ['funding_7d', 'Funding 7d', 'num4'], ['oi_change_7d', 'OI 7d', 'pct'], ['price', 'Price', 'usd']];
+  let sortKey = 'rank', dir = 'asc';
+  function draw() {
+    const sorted = [...rows].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : -1) * (dir === 'asc' ? 1 : -1));
+    const h = cols.filter(([k]) => rows.some((r) => r[k] != null)).map(([k, l, t]) => '<th class="sort ' + (t ? 'num' : '') + '" data-k="' + k + '" ' + (k === sortKey ? 'data-dir="' + dir + '"' : '') + '>' + l + '</th>').join('');
+    const b = sorted.map((r) => '<tr>' + cols.filter(([k]) => rows.some((x) => x[k] != null)).map(([k, , t]) => {
+      const v = r[k]; let s = esc(v), c = t ? 'num' : '';
+      if (t === 'pct') { s = fmt.pct(v, 1); c += ' ' + cls(v); } else if (t === 'num') { s = fmt.sgn(v, 2); c += ' ' + cls(v); } else if (t === 'num4') { s = fmt.num(v, 4); } else if (t === 'usd') { s = fmt.usd(v); }
+      if (k === 'rank') s = v;
+      return '<td class="' + c + '">' + s + '</td>';
+    }).join('') + '</tr>').join('');
+    $('#alts-box').innerHTML = '<div class="tbl-wrap tall"><table><thead><tr>' + h + '</tr></thead><tbody>' + b + '</tbody></table></div>';
+    $('#alts-box').querySelectorAll('th.sort').forEach((th) => th.addEventListener('click', () => { const k = th.dataset.k; if (sortKey === k) dir = dir === 'asc' ? 'desc' : 'asc'; else { sortKey = k; dir = k === 'rank' || k === 'symbol' ? 'asc' : 'desc'; } draw(); }));
+  }
+  draw();
+  if (d.alt_ranking_note) $('#alts-lead').textContent = d.alt_ranking_note;
+}
+
+function renderSetups(d) {
+  const s = d.setups || [];
+  if (!s.length) { $('#setups-box').innerHTML = '<div class="empty">No setups qualify. ' + esc(d.setups_note || 'Heat is outside the zone where the model has held, so nothing is flagged.') + '</div>'; return; }
+  $('#setups-box').innerHTML = '<div class="setups">' + s.map((x) => '<div class="setup"><div class="tier ' + esc(x.tier) + '">' + esc(x.tier) + '</div><div><div class="head">' + esc(x.asset) + ' ' + esc(x.direction) + ', ' + esc(x.horizon) + '</div><div class="body">' + esc(x.trigger) + (x.invalidation ? ' Invalidation: ' + esc(x.invalidation) + '.' : '') + (x.opened ? ' Opened ' + esc(x.opened) + '.' : '') + '</div></div><div class="num ' + cls(x.expected) + '">' + fmt.pct(x.expected, 1) + '<small>' + (x.hit_rate != null ? Math.round(x.hit_rate * 100) + '% hit rate, n=' + (x.n ?? '–') : '') + '</small></div></div>').join('') + '</div>';
+}
+
+function renderLedger(d) {
+  const rows = (d.ledger && d.ledger.rows) || [];
+  if (!rows.length) { $('#ledger-box').innerHTML = '<div class="empty">No forecasts scored yet. The daily refresh adds one row per forecast once its horizon has passed.</div>'; return; }
+  const b = [...rows].reverse().map((r) => '<tr><td>' + esc(r.date) + '</td><td class="num">' + fmt.sgn(r.heat, 2) + '</td><td class="num ' + cls(r.forecast) + '">' + fmt.pct(r.forecast, 2) + '</td><td class="num ' + cls(r.realized) + '">' + (r.realized != null ? fmt.pct(r.realized, 2) : '<span class="mute">pending</span>') + '</td><td>' + (r.hit == null ? '<span class="mute">–</span>' : r.hit ? '<span class="pos">right</span>' : '<span class="neg">wrong</span>') + '</td></tr>').join('');
+  $('#ledger-box').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Date</th><th class="num">Heat</th><th class="num">Forecast 10d</th><th class="num">Realized</th><th>Direction</th></tr></thead><tbody>' + b + '</tbody></table></div>';
+}
+
+function renderHealth(d) {
+  const rows = d.data_health || [];
+  if (!rows.length) { $('#health-box').innerHTML = '<div class="empty">No data inventory in data.json.</div>'; return; }
+  const today = new Date().toISOString().slice(0, 10);
+  const b = rows.map((r) => {
+    const age = r.last && /^\d{4}-\d{2}-\d{2}$/.test(r.last) ? daysBetween(r.last, today) : null;
+    const st = r.status || (age == null ? 'stale' : age > 2 ? 'stale' : age > 0 ? 'lag' : 'ok');
+    return '<tr><td>' + esc(r.series) + (r.note ? '<div class="mute" style="font-size:12px;white-space:normal">' + esc(r.note) + '</div>' : '') + '</td><td>' + esc(r.source) + (r.venue ? ', ' + esc(r.venue) : '') + '</td><td>' + esc(r.last) + '</td><td class="num">' + (age != null ? age + 'd' : '–') + '</td><td class="num">' + (r.rows != null ? Number(r.rows).toLocaleString('en-US') : '–') + '</td><td><span class="status ' + esc(st) + '">' + esc(st) + '</span></td></tr>';
+  }).join('');
+  $('#health-box').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Series</th><th>Source</th><th>Last</th><th class="num">Age</th><th class="num">Rows</th><th>Status</th></tr></thead><tbody>' + b + '</tbody></table></div>';
+}
+
+function renderResearch(d) {
+  const rows = d.research || [];
+  if (!rows.length) { $('#research-box').innerHTML = '<div class="empty">No research entries yet. The weekly and nightly jobs add one per decision.</div>'; return; }
+  $('#research-box').innerHTML = '<div class="log">' + rows.map((r) => '<div class="item ' + esc(r.decision) + '"><div class="when">' + esc(r.date) + ', ' + esc(r.decision) + '</div><div class="what">' + esc(r.what) + '</div><div class="why">' + esc(r.why) + '</div></div>').join('') + '</div>';
+}
+
+function renderJobs(d) {
+  const rows = d.jobs || [];
+  $('#jobs-box').textContent = rows.length ? rows.map((j) => j.line || ('STATUS ' + (j.status || '?') + ' ' + j.name + ' last_run=' + (j.last_run || '–'))).join('\n') : 'No job status lines yet.';
+}
+
+/* ---------- boot ---------- */
+$('#theme').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const dark = cur ? cur === 'dark' : !window.matchMedia('(prefers-color-scheme: light)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  try { localStorage.setItem('heat-theme', dark ? 'light' : 'dark'); } catch (e) {}
+  location.reload();
+});
+try { const t = localStorage.getItem('heat-theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+
+loadData().then((d) => {
+  renderHeader(d); renderHero(d);
+  if (window.LightweightCharts) renderCharts(d); else document.querySelectorAll('.pane').forEach((p) => p.innerHTML = '<div class="empty">Chart library did not load.</div>');
+  renderFactors(d); renderAlts(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderJobs(d);
+});
+</script>
+</body>
+</html>
