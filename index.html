@@ -120,7 +120,17 @@
   section h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
   section .lead { color: var(--text-2); font-size: 13px; margin: 0 0 14px; max-width: 72ch; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
-  .two > section { min-width: 0; }
+  .two > section, .two > div { min-width: 0; }
+  .sub-h { font-size: 13px; font-weight: 500; color: var(--text-2); margin: 0 0 8px; }
+  .idea { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; margin-bottom: 8px; }
+  .idea .tier { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 13px; border: 1px solid var(--line); }
+  .idea .tier.A { border-color: var(--hot); color: var(--hot); } .idea .tier.B { border-color: var(--warn); color: var(--warn); }
+  .idea .head { font-weight: 500; } .idea .head span { color: var(--text-3); font-weight: 400; }
+  .idea .body { color: var(--text-2); font-size: 13px; margin-top: 3px; }
+  .idea .drivers { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .idea .drivers span { font-size: 12px; border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 6px; color: var(--text-2); }
+  .idea .num { font-size: 15px; font-weight: 500; text-align: right; } .idea .num small { display: block; color: var(--text-3); font-weight: 400; font-size: 12px; }
+  .side-long { color: var(--up); } .side-short { color: var(--down); }
   @media (max-width: 1024px) { .two { grid-template-columns: 1fr; } }
   .tbl-wrap.tall { max-height: 540px; overflow-y: auto; }
 
@@ -227,7 +237,7 @@
       <div><div class="k">BTC, next 10 days</div><div class="v" id="s-fc">–</div><div class="n" id="s-fc-n">–</div></div>
       <div><div class="k">Forecast hit rate, live</div><div class="v" id="s-hit">–</div><div class="n" id="s-hit-n">–</div></div>
       <div><div class="k">Last crossing</div><div class="v" id="s-cross">–</div><div class="n" id="s-cross-n">–</div></div>
-      <div><div class="k">Open setups</div><div class="v" id="s-setups">–</div><div class="n" id="s-setups-n">–</div></div>
+      <div><div class="k">Live ideas</div><div class="v" id="s-setups">–</div><div class="n" id="s-setups-n">–</div></div>
       <div><div class="k">Data</div><div class="v" id="s-data">–</div><div class="n" id="s-data-n">–</div></div>
     </div>
   </div>
@@ -245,13 +255,28 @@
     </div>
     <div class="pane"><div class="readout" id="ro-price"></div><div class="title">BTC and ETH, USD</div><div class="chart" id="c-price"></div></div>
     <div class="pane short"><div class="readout" id="ro-heat"></div><div class="title">Heat, -1 to +1</div><div class="chart" id="c-heat"></div></div>
-    <div class="pane short"><div class="readout" id="ro-fc"></div><div class="title">Expected BTC return, next 10 days</div><div class="chart" id="c-fc"></div></div>
+    <div class="pane short"><div class="readout" id="ro-fc"></div><div class="title">Expected BTC return, next 10 days. Full colour where heat was in the hot zone, faded where the forecast has not held.</div><div class="chart" id="c-fc"></div></div>
   </section>
 
   <section>
     <h2>Explore any series</h2>
     <div class="explore-head"><label for="explore-sel">Series</label><select id="explore-sel"></select><span class="hint" id="explore-n"></span></div>
     <div class="pane short"><div class="readout" id="ro-ex"></div><div class="chart" id="c-explore"></div></div>
+  </section>
+
+  <section>
+    <h2>Trade ideas</h2>
+    <p class="lead" id="ideas-lead">Names the setup library flags as ready for a run or a short. Each idea carries the setup's own out-of-sample record, the features that fired, and the level that takes it off the list.</p>
+    <div class="two ideas-grid">
+      <div><h3 class="sub-h">Long: ready for a run</h3><div id="ideas-long"></div></div>
+      <div><h3 class="sub-h">Short: looks done</h3><div id="ideas-short"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Watchlist</h2>
+    <p class="lead">Within a day of a trigger. The next move is visible here before it fires.</p>
+    <div id="watch-box"></div>
   </section>
 
   <section>
@@ -264,6 +289,18 @@
     <h2>Alt ranking</h2>
     <p class="lead" id="alts-lead">Cross-sectional rank of the alt universe by expected 10-day return against BTC. Click a column to sort.</p>
     <div id="alts-box"></div>
+  </section>
+
+  <section>
+    <h2>Setup library</h2>
+    <p class="lead">Every setup rule, with its event-study record on the full history and its live record from the ledger. Rejected and insufficient rules stay listed so they are not retested without a new angle.</p>
+    <div id="library-box"></div>
+  </section>
+
+  <section>
+    <h2>Ranking model</h2>
+    <p class="lead">How well the cross-sectional rank orders next-period returns, by year and by heat tercile. IC is the rank correlation between the score and the forward return.</p>
+    <div id="rankstats-box"></div>
   </section>
 
   <div class="two">
@@ -417,7 +454,7 @@ function baseOpts() {
     autoSize: true,
     layout: { background: { type: 'solid', color: css('--surface') }, textColor: css('--text-2'), fontFamily: css('--font'), fontSize: 11 },
     grid: { vertLines: { color: css('--line-soft') }, horzLines: { color: css('--line-soft') } },
-    rightPriceScale: { borderColor: css('--line'), scaleMargins: { top: 0.18, bottom: 0.08 } },
+    rightPriceScale: { borderColor: css('--line'), scaleMargins: { top: 0.18, bottom: 0.08 }, minimumWidth: 76 },
     timeScale: { borderColor: css('--line'), rightOffset: 3, minBarSpacing: 0.5 },
     crosshair: { mode: LC.CrosshairMode.Normal, vertLine: { color: css('--text-3'), labelBackgroundColor: css('--raised') }, horzLine: { color: css('--text-3'), labelBackgroundColor: css('--raised') } },
     handleScroll: true, handleScale: true,
@@ -435,10 +472,14 @@ function makeChart(id) {
   return chart;
 }
 function toSeries(dates, values) {
+  // Empty days stay in as whitespace points so every pane shares one time axis.
   const out = [];
-  for (let i = 0; i < dates.length; i++) { const v = values[i]; if (v != null && !isNaN(v)) out.push({ time: dates[i], value: v }); }
+  for (let i = 0; i < dates.length; i++) { const v = values[i]; out.push(v != null && !isNaN(v) ? { time: dates[i], value: v } : { time: dates[i] }); }
   return out;
 }
+function lastPoint(data) { for (let i = data.length - 1; i >= 0; i--) if (data[i].value != null) return data[i]; return null; }
+function firstPoint(data) { for (let i = 0; i < data.length; i++) if (data[i].value != null) return data[i]; return null; }
+function hexToRgba(hex, a) { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
 function crossings(dates, heat, hot, cold) {
   const marks = [];
   for (let i = 1; i < heat.length; i++) {
@@ -536,7 +577,12 @@ function renderCharts(d) {
   const fc = makeChart('c-fc');
   const fcS = fc.addHistogramSeries({ priceFormat: { type: 'custom', formatter: (v) => fmt.pct(v, 1) }, base: 0 });
   const fcVals = S.forecast_btc_10d || [];
-  fcS.setData(dates.map((t, i) => fcVals[i] == null || isNaN(fcVals[i]) ? null : { time: t, value: fcVals[i], color: fcVals[i] >= 0 ? css('--up') : css('--down') }).filter(Boolean));
+  const up = css('--up'), down = css('--down');
+  fcS.setData(dates.map((t, i) => {
+    const v = fcVals[i]; if (v == null || isNaN(v)) return { time: t };
+    const reliable = S.heat[i] != null && S.heat[i] >= hot;
+    return { time: t, value: v, color: hexToRgba(v >= 0 ? up : down, reliable ? 1 : 0.35) };
+  }));
   fcS.createPriceLine({ price: 0, color: css('--line'), lineWidth: 1, axisLabelVisible: false });
 
   // overlays
@@ -598,16 +644,25 @@ function renderCharts(d) {
   let exS = null;
   const flat = {}; for (const k of Object.keys(S)) { if (k === 'date' || k === 'factors') continue; if (Array.isArray(S[k])) flat[k] = S[k]; }
   for (const k of keys) flat['factor: ' + k] = facs[k];
-  const sel = $('#explore-sel'); Object.keys(flat).forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o); });
+  const sel = $('#explore-sel');
+  const groups = {};
+  Object.keys(flat).forEach((k) => {
+    const m = k.match(/^([a-z0-9_]+)_([A-Z][A-Z0-9]{1,9})$/);
+    const g = k.startsWith('factor: ') ? 'Factors' : m ? m[2] : 'Market';
+    (groups[g] = groups[g] || []).push(k);
+  });
+  const order = ['Market', 'Factors', ...Object.keys(groups).filter((g) => g !== 'Market' && g !== 'Factors').sort()];
+  order.forEach((g) => { if (!groups[g]) return; const og = document.createElement('optgroup'); og.label = g; groups[g].forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = k; og.appendChild(o); }); sel.appendChild(og); });
   function showExplore(k) {
     if (exS) ex.removeSeries(exS);
     const vals = flat[k]; const data = toSeries(dates, vals);
-    const small = Math.abs(data[data.length - 1]?.value ?? 1) < 10;
-    exS = ex.addLineSeries({ color: css('--text'), lineWidth: 1.2, priceFormat: { type: 'price', precision: small ? 3 : 0, minMove: small ? 0.001 : 1 } });
+    const v = lastPoint(data), f0 = firstPoint(data);
+    const small = Math.abs(v?.value ?? 1) < 10;
+    exS = ex.addLineSeries({ color: css('--text'), lineWidth: 1.2, priceFormat: { type: 'price', precision: small ? 4 : 0, minMove: small ? 0.0001 : 1 } });
     exS.setData(data);
-    const v = data[data.length - 1];
-    $('#ro-ex').innerHTML = '<span><b>' + esc(k) + '</b></span><span>latest <b>' + (v ? fmt.num(v.value, Math.abs(v.value) < 10 ? 3 : 1) : '–') + '</b></span>';
-    $('#explore-n').textContent = data.length + ' observations, ' + (data[0]?.time || '') + ' to ' + (v?.time || '');
+    const count = data.filter((p) => p.value != null).length;
+    $('#ro-ex').innerHTML = '<span><b>' + esc(k) + '</b></span><span>latest <b>' + (v ? fmt.num(v.value, small ? 4 : 1) : '–') + '</b></span>';
+    $('#explore-n').textContent = count + ' observations, ' + (f0?.time || '') + ' to ' + (v?.time || '') + (count < dates.length ? ', gaps shown as breaks' : '');
     ex.timeScale().setVisibleLogicalRange(price.timeScale().getVisibleLogicalRange());
   }
   sel.addEventListener('change', () => showExplore(sel.value));
@@ -653,6 +708,53 @@ function renderAlts(d) {
   }
   draw();
   if (d.alt_ranking_note) $('#alts-lead').textContent = d.alt_ranking_note;
+}
+
+function ideaCard(x) {
+  const drivers = (x.drivers || []).map((f) => '<span>' + esc(f.name) + ' ' + esc(f.value != null ? (typeof f.value === 'number' ? fmt.sgn(f.value, 2) : f.value) : '') + '</span>').join('');
+  return '<div class="idea"><div class="tier ' + esc(x.tier || '') + '">' + esc(x.tier || '–') + '</div><div>' +
+    '<div class="head">' + esc(x.symbol) + ' <span class="side-' + esc(x.side) + '">' + esc(x.side) + '</span> <span>' + esc(x.setup || '') + ', ' + esc(x.horizon || '') + (x.decile != null ? ', decile ' + esc(x.decile) : '') + '</span></div>' +
+    '<div class="body">' + (x.invalidation ? 'Invalidation: ' + esc(x.invalidation) + '. ' : '') + (x.gate ? 'Gate: ' + esc(x.gate) + '. ' : '') + (x.venue ? 'Venue: ' + esc(x.venue) + '. ' : '') + (x.size_hint != null ? 'Size: ' + esc(x.size_hint) + '. ' : '') + (x.opened ? 'Fired ' + esc(x.opened) + '.' : '') + '</div>' +
+    (drivers ? '<div class="drivers">' + drivers + '</div>' : '') +
+    '</div><div class="num ' + cls(x.expected) + '">' + fmt.pct(x.expected, 1) + '<small>' + (x.hit_rate != null ? Math.round(x.hit_rate * 100) + '% hit, n=' + (x.n ?? '–') : 'no record') + '</small></div></div>';
+}
+function renderIdeas(d) {
+  const ideas = d.ideas || [];
+  const longs = ideas.filter((x) => x.side === 'long'), shorts = ideas.filter((x) => x.side === 'short');
+  const order = { A: 0, B: 1, C: 2 }; const srt = (a, b) => (order[a.tier] ?? 9) - (order[b.tier] ?? 9) || (b.expected ?? 0) - (a.expected ?? 0);
+  $('#ideas-long').innerHTML = longs.length ? longs.sort(srt).map(ideaCard).join('') : '<div class="empty">' + esc(d.ideas_note_long || 'No long setup has fired. ' + (d.ideas_note || 'Ideas appear once the setup library has admitted rules and one of them triggers.')) + '</div>';
+  $('#ideas-short').innerHTML = shorts.length ? shorts.sort(srt).map(ideaCard).join('') : '<div class="empty">' + esc(d.ideas_note_short || 'No short setup has fired.') + '</div>';
+  if (d.ideas_lead) $('#ideas-lead').textContent = d.ideas_lead;
+  $('#s-setups').textContent = ideas.length || (d.setups || []).length;
+  $('#s-setups-n').textContent = ideas.length ? longs.length + ' long, ' + shorts.length + ' short' : 'nothing qualifies';
+}
+function renderWatchlist(d) {
+  const rows = d.watchlist || [];
+  if (!rows.length) { $('#watch-box').innerHTML = '<div class="empty">Nothing within a day of a trigger.</div>'; return; }
+  const b = rows.map((r) => '<tr><td>' + esc(r.symbol) + '</td><td class="side-' + esc(r.side) + '">' + esc(r.side) + '</td><td>' + esc(r.setup) + '</td><td class="wrap">' + esc(r.distance || r.note || '') + '</td><td>' + esc(r.date || '') + '</td></tr>').join('');
+  $('#watch-box').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Asset</th><th>Side</th><th>Setup</th><th>Distance to trigger</th><th>As of</th></tr></thead><tbody>' + b + '</tbody></table></div>';
+}
+function renderLibrary(d) {
+  const rows = d.setup_library || [];
+  if (!rows.length) { $('#library-box').innerHTML = '<div class="empty">No setups tested yet. The nightly research job adds one row per rule with its verdict.</div>'; return; }
+  const yr = (o) => o ? Object.keys(o).sort().map((y) => y.slice(2) + ':' + o[y]).join(' ') : '–';
+  const ter = (o) => o ? ['cold', 'mid', 'hot'].map((k) => k + ' ' + (o[k] != null ? fmt.pct(o[k], 1) : '–')).join(', ') : '–';
+  const b = rows.map((r) => '<tr><td><div>' + esc(r.name) + '</div><div class="mute" style="font-size:12px">' + esc(r.horizon || '') + '</div></td><td class="side-' + esc(r.side) + '">' + esc(r.side) + '</td><td><span class="status ' + (r.status === 'admitted' ? 'active' : r.status === 'watch' ? 'watch' : 'dropped') + '">' + esc(r.status) + '</span></td>' +
+    '<td class="num">' + (r.triggers ?? '–') + '</td><td class="wrap" style="min-width:160px">' + esc(yr(r.triggers_by_year)) + '</td>' +
+    '<td class="num">' + (r.hit_rate != null ? Math.round(r.hit_rate * 100) + '%' : '–') + '</td><td class="num ' + cls(r.mean_net) + '">' + fmt.pct(r.mean_net, 2) + '</td>' +
+    '<td class="num">' + (r.baseline != null ? fmt.pct(r.baseline, 2) : '–') + (r.ci ? '<div class="mute" style="font-size:12px">' + fmt.pct(r.ci[0], 1) + ' to ' + fmt.pct(r.ci[1], 1) + '</div>' : '') + '</td>' +
+    '<td class="wrap" style="min-width:200px">' + esc(ter(r.by_tercile)) + '</td>' +
+    '<td class="num">' + (r.live_n != null ? r.live_n + (r.live_hit_rate != null ? ' / ' + Math.round(r.live_hit_rate * 100) + '%' : '') : '–') + '</td><td>' + esc(r.last_retest || '–') + '</td></tr>').join('');
+  $('#library-box').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Setup</th><th>Side</th><th>Status</th><th class="num">Triggers</th><th>By year</th><th class="num">Hit rate</th><th class="num">Mean net</th><th class="num">Baseline, 90% CI</th><th>By heat tercile</th><th class="num">Live n / hit</th><th>Last retest</th></tr></thead><tbody>' + b + '</tbody></table></div>';
+}
+function renderRankStats(d) {
+  const r = d.ranking_stats;
+  if (!r || (!r.by_year && !r.by_tercile)) { $('#rankstats-box').innerHTML = '<div class="empty">No cross-sectional model scored yet.</div>'; return; }
+  const row = (x, label) => '<tr><td>' + esc(label) + '</td><td class="num ' + cls(x.ic_mean) + '">' + fmt.sgn(x.ic_mean, 3) + '</td><td class="num">' + fmt.num(x.ic_t, 1) + '</td><td class="num ' + cls(x.decile_spread) + '">' + fmt.pct(x.decile_spread, 2) + '</td><td class="num">' + (x.turnover != null ? Math.round(x.turnover * 100) + '%' : '–') + '</td><td class="num">' + (x.n ?? '–') + '</td></tr>';
+  const head = '<thead><tr><th>Period</th><th class="num">IC mean</th><th class="num">IC t</th><th class="num">Decile spread, net</th><th class="num">Top-decile turnover</th><th class="num">n</th></tr></thead>';
+  const yrs = (r.by_year || []).map((x) => row(x, x.year)).join('');
+  const ters = (r.by_tercile || []).map((x) => row(x, 'Heat ' + x.tercile)).join('');
+  $('#rankstats-box').innerHTML = '<div class="tbl-wrap"><table>' + head + '<tbody>' + yrs + ters + '</tbody></table></div>' + (r.note ? '<p class="hint" style="margin-top:8px">' + esc(r.note) + '</p>' : '');
 }
 
 function renderSetups(d) {
@@ -704,7 +806,7 @@ try { const t = localStorage.getItem('heat-theme'); if (t) document.documentElem
 loadData().then((d) => {
   renderHeader(d); renderHero(d);
   if (window.LightweightCharts) renderCharts(d); else document.querySelectorAll('.pane').forEach((p) => p.innerHTML = '<div class="empty">Chart library did not load.</div>');
-  renderFactors(d); renderAlts(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderJobs(d);
+  renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderJobs(d);
 });
 </script>
 </body>
