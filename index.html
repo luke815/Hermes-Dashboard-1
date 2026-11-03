@@ -131,6 +131,15 @@
   .idea .drivers span { font-size: 12px; border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 6px; color: var(--text-2); }
   .idea .num { font-size: 15px; font-weight: 500; text-align: right; } .idea .num small { display: block; color: var(--text-3); font-weight: 400; font-size: 12px; }
   .side-long { color: var(--up); } .side-short { color: var(--down); }
+  .rs-list { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .rs-row { display: grid; grid-template-columns: 28px 70px 1fr 90px; gap: 10px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .rs-row:last-child { border-bottom: 0; }
+  .rs-row .r { color: var(--text-3); font-size: 12px; } .rs-row .sym { font-weight: 500; }
+  .rs-row .bar { width: 100%; margin: 0; height: 8px; }
+  .rs-row .v { text-align: right; font-weight: 500; }
+  .rs-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .rs-tags span { border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; font-size: 13px; }
+  .rs-tags span.up { border-color: var(--up); color: var(--up); } .rs-tags span.dn { border-color: var(--down); color: var(--down); }
   @media (max-width: 1024px) { .two { grid-template-columns: 1fr; } }
   .tbl-wrap.tall { max-height: 540px; overflow-y: auto; }
 
@@ -265,6 +274,25 @@
   </section>
 
   <section>
+    <h2>Relative strength board</h2>
+    <p class="lead" id="rs-lead">Every name in the liquid universe against the benchmark you pick, over the window you pick. A view of what is moving, not a tested signal: the cross-sectional model that would turn this into a ranking is still in the research queue.</p>
+    <div class="controls">
+      <div class="seg" id="rs-bench"><button data-b="BTC" aria-pressed="true">vs BTC</button><button data-b="ETH">vs ETH</button><button data-b="SOL">vs SOL</button></div>
+      <div class="seg" id="rs-win"></div>
+      <span class="hint" id="rs-asof"></span>
+    </div>
+    <div class="two rs-grid">
+      <div><h3 class="sub-h" id="rs-strong-h">Strongest</h3><div id="rs-strong"></div></div>
+      <div><h3 class="sub-h" id="rs-weak-h">Weakest</h3><div id="rs-weak"></div></div>
+    </div>
+    <h3 class="sub-h" style="margin-top:14px">Leading across windows</h3>
+    <p class="hint" style="margin:0 0 8px">Names in the top fifth against the benchmark on 1h, 4h and 24h at once, and the same for the bottom fifth. Persistence is the part worth watching.</p>
+    <div id="rs-persist"></div>
+    <h3 class="sub-h" style="margin-top:14px">Full board</h3>
+    <div id="rs-table"></div>
+  </section>
+
+  <section>
     <h2>Trade ideas</h2>
     <p class="lead" id="ideas-lead">Names the setup library flags as ready for a run or a short. Each idea carries the setup's own out-of-sample record, the features that fired, and the level that takes it off the list.</p>
     <div class="two ideas-grid">
@@ -279,18 +307,6 @@
     <div id="watch-box"></div>
   </section>
 
-  
-  <section>
-    <h2>Relative performance, 90 days</h2>
-    <p class="lead" id="rel-lead">Alt returns against BTC, ETH and SOL.</p>
-    <div id="rel-box"></div>
-  </section>
-  
-  <section>
-    <h2>Strongest and weakest right now</h2>
-    <p class="lead">Against BTC, on the last completed hour and the last four hours. Eleven names.</p>
-    <div id="leaders-box"></div>
-  </section>
   <section>
     <h2>Factors</h2>
     <p class="lead" id="factors-lead">Each factor is a rolling z-score squashed to -1 to +1. Out-of-sample spread is top minus bottom quintile, 10-day forward return, second half of the history.</p>
@@ -340,6 +356,12 @@
       <div id="research-box"></div>
     </section>
   </div>
+
+  <section>
+    <h2>Research queue</h2>
+    <p class="lead" id="queue-lead">Every backlog item, in order, with its verdict. One item per run; a verdict is admitted, rejected or insufficient, each with a results file.</p>
+    <div id="queue-box"></div>
+  </section>
 
   <section>
     <h2>Jobs</h2>
@@ -681,24 +703,6 @@ function renderCharts(d) {
   if (Object.keys(flat).length) showExplore(sel.value);
 }
 
-
-function renderRelative(d) {
-  const rel = d.relative;
-  if (!rel || !rel.rows) { const b = document.getElementById('rel-box'); if (b) b.innerHTML = '<div class="empty">No relative performance yet.</div>'; return; }
-  document.getElementById('rel-lead').textContent = rel.note + ' BTC ' + rel.benchmarks.BTC + '%, ETH ' + rel.benchmarks.ETH + '%, SOL ' + rel.benchmarks.SOL + '%.';
-  const body = rel.rows.map(r => '<tr><td>' + r.symbol + '</td><td class="num ' + (r.return_90d > 0 ? 'pos' : 'neg') + '">' + (r.return_90d > 0 ? '+' : '') + r.return_90d.toFixed(1) + '%</td><td class="num ' + (r.vs_btc > 0 ? 'pos' : 'neg') + '">' + (r.vs_btc > 0 ? '+' : '') + r.vs_btc.toFixed(1) + '</td><td class="num ' + (r.vs_eth > 0 ? 'pos' : 'neg') + '">' + (r.vs_eth > 0 ? '+' : '') + r.vs_eth.toFixed(1) + '</td><td class="num ' + (r.vs_sol > 0 ? 'pos' : 'neg') + '">' + (r.vs_sol > 0 ? '+' : '') + r.vs_sol.toFixed(1) + '</td></tr>').join('');
-  document.getElementById('rel-box').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Asset</th><th class="num">90d return</th><th class="num">vs BTC</th><th class="num">vs ETH</th><th class="num">vs SOL</th></tr></thead><tbody>' + body + '</tbody></table></div>';
-}
-
-
-function renderLeaders(d) {
-  const box = document.getElementById('leaders-box');
-  if (!box || !d.leaders) return;
-  const col = (title, rows) => '<div><div class="k">' + title + '</div>' + rows.map(r => '<div class="' + (r.vs_btc >= 0 ? 'pos' : 'neg') + '">' + r.symbol + ' ' + (r.vs_btc > 0 ? '+' : '') + r.vs_btc.toFixed(2) + '%</div>').join('') + '</div>';
-  const pane = (label, x) => '<div><div class="k">' + label + ', BTC ' + x.btc + '%</div>' + col('Strongest', x.strongest) + col('Weakest', x.weakest) + '</div>';
-  box.innerHTML = '<div class="strip">' + pane('Last hour', d.leaders.hour) + pane('Last 4 hours', d.leaders.four_hour) + '</div>';
-}
-
 function renderFactors(d) {
   const f = d.factors || []; if (!f.length) { $('#t-factors').outerHTML = '<div class="empty">No factor table in data.json.</div>'; return; }
   const maxC = Math.max(0.0001, ...f.map((x) => Math.abs((x.weight || 0) * (x.value || 0))));
@@ -738,6 +742,56 @@ function renderAlts(d) {
   }
   draw();
   if (d.alt_ranking_note) $('#alts-lead').textContent = d.alt_ranking_note;
+}
+
+function renderRelative(d) {
+  let R = d.relative_strength;
+  // fallback: build a board from the older leaders/relative keys so the section is never empty
+  if (!R && (d.leaders || d.relative)) {
+    const rows = {}; const add = (sym, win, k, v) => { rows[sym] = rows[sym] || { symbol: sym, ret: {}, vs_btc: {}, vs_eth: {}, vs_sol: {} }; rows[sym][k][win] = v; };
+    if (d.leaders) for (const [key, win] of [['hour', '1h'], ['four_hour', '4h']]) { const L = d.leaders[key]; if (!L) continue; [...(L.strongest || []), ...(L.weakest || [])].forEach((x) => add(x.symbol, win, 'vs_btc', x.vs_btc)); }
+    if (d.relative && d.relative.rows) d.relative.rows.forEach((x) => { add(x.symbol, '90d', 'ret', x.return_90d); add(x.symbol, '90d', 'vs_btc', x.vs_btc); add(x.symbol, '90d', 'vs_eth', x.vs_eth); add(x.symbol, '90d', 'vs_sol', x.vs_sol); });
+    R = { as_of: (d.leaders && d.leaders.four_hour && d.leaders.four_hour.as_of) || (d.relative && d.relative.as_of) || '', windows: ['1h', '4h', '90d'], universe: 'names on disk only', rows: Object.values(rows), benchmarks: {} };
+  }
+  if (!R || !R.rows || !R.rows.length) { ['#rs-strong', '#rs-weak', '#rs-persist', '#rs-table'].forEach((id) => $(id).innerHTML = '<div class="empty">No relative strength data yet. It appears once the hourly job pulls intraday bars for the universe.</div>'); return; }
+  const wins = R.windows || ['1h', '4h', '24h', '7d', '30d', '90d'];
+  let bench = 'BTC', win = wins.includes('4h') ? '4h' : wins[0];
+  const key = () => 'vs_' + bench.toLowerCase();
+  $('#rs-asof').textContent = (R.as_of ? 'As of ' + String(R.as_of).replace('T', ' ').slice(0, 16) + ' UTC. ' : '') + (R.universe || '') + (R.rows.length ? ' ' + R.rows.length + ' names.' : '');
+  const wb = $('#rs-win'); wb.innerHTML = wins.map((w) => '<button data-w="' + esc(w) + '" aria-pressed="' + (w === win) + '">' + esc(w) + '</button>').join('');
+  const val = (r, w) => (r[key()] && r[key()][w] != null) ? r[key()][w] : null;
+  function lists() {
+    const rows = R.rows.filter((r) => val(r, win) != null && r.symbol !== bench).map((r) => ({ r, v: val(r, win) })).sort((a, b) => b.v - a.v);
+    const maxAbs = Math.max(0.01, ...rows.map((x) => Math.abs(x.v)));
+    const bm = (R.benchmarks && R.benchmarks[bench] && R.benchmarks[bench][win] != null) ? ' (' + bench + ' itself ' + fmt.pct(R.benchmarks[bench][win], 2) + ')' : '';
+    $('#rs-strong-h').textContent = 'Strongest vs ' + bench + ', ' + win + bm; $('#rs-weak-h').textContent = 'Weakest vs ' + bench + ', ' + win;
+    const row = (x, i) => '<div class="rs-row"><span class="r">' + (i + 1) + '</span><span class="sym">' + esc(x.r.symbol) + '</span><span class="bar"><span style="left:' + (x.v >= 0 ? 50 : 50 - Math.abs(x.v) / maxAbs * 50) + '%;width:' + Math.abs(x.v) / maxAbs * 50 + '%;background:' + (x.v >= 0 ? 'var(--up)' : 'var(--down)') + '"></span></span><span class="v ' + cls(x.v) + '">' + fmt.pct(x.v, 2) + '</span></div>';
+    $('#rs-strong').innerHTML = rows.length ? '<div class="rs-list">' + rows.slice(0, 10).map(row).join('') + '</div>' : '<div class="empty">No data for this window.</div>';
+    $('#rs-weak').innerHTML = rows.length ? '<div class="rs-list">' + rows.slice(-10).reverse().map(row).join('') + '</div>' : '<div class="empty">No data for this window.</div>';
+    // persistence across 1h, 4h, 24h
+    const pw = ['1h', '4h', '24h'].filter((w) => wins.includes(w));
+    if (pw.length >= 2) {
+      const quint = {}; pw.forEach((w) => { const rs = R.rows.filter((r) => val(r, w) != null && r.symbol !== bench).sort((a, b) => val(b, w) - val(a, w)); const n = Math.max(1, Math.floor(rs.length / 5)); quint[w] = { top: new Set(rs.slice(0, n).map((r) => r.symbol)), bot: new Set(rs.slice(-n).map((r) => r.symbol)) }; });
+      const syms = R.rows.map((r) => r.symbol).filter((s2) => s2 !== bench);
+      const up = syms.filter((s2) => pw.every((w) => quint[w].top.has(s2))), dn = syms.filter((s2) => pw.every((w) => quint[w].bot.has(s2)));
+      $('#rs-persist').innerHTML = '<div class="rs-tags">' + (up.length ? up.map((s2) => '<span class="up">' + esc(s2) + '</span>').join('') : '<span class="mute">no name leads on all of ' + pw.join(', ') + '</span>') + (dn.length ? dn.map((s2) => '<span class="dn">' + esc(s2) + '</span>').join('') : '') + '</div>';
+    } else $('#rs-persist').innerHTML = '<div class="empty">Needs at least two of the 1h, 4h and 24h windows.</div>';
+  }
+  function table() {
+    let sortW = win, dir = 'desc';
+    const draw = () => {
+      const rows = [...R.rows].filter((r) => r.symbol !== bench).sort((a, b) => ((val(b, sortW) ?? -1e9) - (val(a, sortW) ?? -1e9)) * (dir === 'desc' ? 1 : -1));
+      const h = '<th>Asset</th>' + wins.map((w) => '<th class="num sort" data-w="' + esc(w) + '" ' + (w === sortW ? 'data-dir="' + dir + '"' : '') + '>' + esc(w) + '</th>').join('') + (R.rows.some((r) => r.oi_usd != null) ? '<th class="num">OI, USD m</th>' : '') + (R.rows.some((r) => r.funding != null) ? '<th class="num">Funding</th>' : '');
+      const b = rows.map((r) => '<tr><td class="sym">' + esc(r.symbol) + '</td>' + wins.map((w) => { const v = val(r, w); return '<td class="num ' + cls(v) + '">' + (v == null ? '–' : fmt.pct(v, 1)) + '</td>'; }).join('') + (R.rows.some((x) => x.oi_usd != null) ? '<td class="num">' + (r.oi_usd != null ? (r.oi_usd / 1e6).toFixed(0) : '–') + '</td>' : '') + (R.rows.some((x) => x.funding != null) ? '<td class="num">' + (r.funding != null ? fmt.num(r.funding, 4) : '–') + '</td>' : '') + '</tr>').join('');
+      $('#rs-table').innerHTML = '<div class="tbl-wrap tall"><table><thead><tr>' + h + '</tr></thead><tbody>' + b + '</tbody></table></div>';
+      $('#rs-table').querySelectorAll('th.sort').forEach((th) => th.addEventListener('click', () => { const w = th.dataset.w; if (sortW === w) dir = dir === 'desc' ? 'asc' : 'desc'; else { sortW = w; dir = 'desc'; } draw(); }));
+    };
+    draw();
+  }
+  function all() { lists(); table(); }
+  $('#rs-bench').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { $('#rs-bench').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); bench = b.dataset.b; all(); }));
+  wb.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { wb.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); win = b.dataset.w; all(); }));
+  all();
 }
 
 function ideaCard(x) {
@@ -818,6 +872,17 @@ function renderResearch(d) {
   $('#research-box').innerHTML = '<div class="log">' + rows.map((r) => '<div class="item ' + esc(r.decision) + '"><div class="when">' + esc(r.date) + ', ' + esc(r.decision) + '</div><div class="what">' + esc(r.what) + '</div><div class="why">' + esc(r.why) + '</div></div>').join('') + '</div>';
 }
 
+function renderQueue(d) {
+  const rows = d.backlog || [];
+  if (!rows.length) { $('#queue-box').innerHTML = '<div class="empty">No backlog published yet.</div>'; return; }
+  const done = rows.filter((r) => ['admitted', 'rejected', 'insufficient', 'done'].includes(r.status)).length;
+  const next = rows.find((r) => r.status === 'queued' || r.status === 'running');
+  $('#queue-lead').textContent = done + ' of ' + rows.length + ' items have a verdict.' + (next ? ' Next: ' + next.id + ', ' + next.title + '.' : '');
+  const pill = (st) => '<span class="status ' + (st === 'admitted' ? 'active' : st === 'running' ? 'watch' : st === 'queued' ? '' : 'dropped') + '">' + esc(st) + '</span>';
+  const b = rows.map((r) => '<tr><td>' + esc(r.id) + '</td><td class="wrap" style="min-width:260px;color:var(--text)">' + esc(r.title) + '</td><td>' + pill(r.status || 'queued') + '</td><td class="wrap" style="min-width:280px">' + esc(r.verdict || '') + '</td><td>' + esc(r.date || '') + '</td><td class="mute">' + esc(r.results || '') + '</td></tr>').join('');
+  $('#queue-box').innerHTML = '<div class="tbl-wrap tall"><table><thead><tr><th>#</th><th>Item</th><th>Status</th><th>Verdict</th><th>Date</th><th>Results file</th></tr></thead><tbody>' + b + '</tbody></table></div>';
+}
+
 function renderJobs(d) {
   const rows = d.jobs || [];
   $('#jobs-box').textContent = rows.length ? rows.map((j) => j.line || ('STATUS ' + (j.status || '?') + ' ' + j.name + ' last_run=' + (j.last_run || '–'))).join('\n') : 'No job status lines yet.';
@@ -836,7 +901,7 @@ try { const t = localStorage.getItem('heat-theme'); if (t) document.documentElem
 loadData().then((d) => {
   renderHeader(d); renderHero(d);
   if (window.LightweightCharts) renderCharts(d); else document.querySelectorAll('.pane').forEach((p) => p.innerHTML = '<div class="empty">Chart library did not load.</div>');
-  renderIdeas(d); renderWatchlist(d); renderRelative(d); renderLeaders(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderJobs(d);
+  renderRelative(d); renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderQueue(d); renderJobs(d);
 });
 </script>
 </body>
