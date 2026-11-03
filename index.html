@@ -279,6 +279,12 @@
     <div id="watch-box"></div>
   </section>
 
+  
+  <section>
+    <h2>Relative performance, 90 days</h2>
+    <p class="lead" id="rel-lead">Alt returns against BTC, ETH and SOL.</p>
+    <div id="rel-box"></div>
+  </section>
   <section>
     <h2>Factors</h2>
     <p class="lead" id="factors-lead">Each factor is a rolling z-score squashed to -1 to +1. Out-of-sample spread is top minus bottom quintile, 10-day forward return, second half of the history.</p>
@@ -669,6 +675,15 @@ function renderCharts(d) {
   if (Object.keys(flat).length) showExplore(sel.value);
 }
 
+
+function renderRelative(d) {
+  const rel = d.relative;
+  if (!rel || !rel.rows) { const b = document.getElementById('rel-box'); if (b) b.innerHTML = '<div class="empty">No relative performance yet.</div>'; return; }
+  document.getElementById('rel-lead').textContent = rel.note + ' BTC ' + rel.benchmarks.BTC + '%, ETH ' + rel.benchmarks.ETH + '%, SOL ' + rel.benchmarks.SOL + '%.';
+  const body = rel.rows.map(r => '<tr><td>' + r.symbol + '</td><td class="num ' + (r.return_90d > 0 ? 'pos' : 'neg') + '">' + (r.return_90d > 0 ? '+' : '') + r.return_90d.toFixed(1) + '%</td><td class="num ' + (r.vs_btc > 0 ? 'pos' : 'neg') + '">' + (r.vs_btc > 0 ? '+' : '') + r.vs_btc.toFixed(1) + '</td><td class="num ' + (r.vs_eth > 0 ? 'pos' : 'neg') + '">' + (r.vs_eth > 0 ? '+' : '') + r.vs_eth.toFixed(1) + '</td><td class="num ' + (r.vs_sol > 0 ? 'pos' : 'neg') + '">' + (r.vs_sol > 0 ? '+' : '') + r.vs_sol.toFixed(1) + '</td></tr>').join('');
+  document.getElementById('rel-box').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Asset</th><th class="num">90d return</th><th class="num">vs BTC</th><th class="num">vs ETH</th><th class="num">vs SOL</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+
 function renderFactors(d) {
   const f = d.factors || []; if (!f.length) { $('#t-factors').outerHTML = '<div class="empty">No factor table in data.json.</div>'; return; }
   const maxC = Math.max(0.0001, ...f.map((x) => Math.abs((x.weight || 0) * (x.value || 0))));
@@ -806,7 +821,7 @@ try { const t = localStorage.getItem('heat-theme'); if (t) document.documentElem
 loadData().then((d) => {
   renderHeader(d); renderHero(d);
   if (window.LightweightCharts) renderCharts(d); else document.querySelectorAll('.pane').forEach((p) => p.innerHTML = '<div class="empty">Chart library did not load.</div>');
-  renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderJobs(d);
+  renderIdeas(d); renderWatchlist(d); renderRelative(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderJobs(d);
 });
 </script>
 </body>
