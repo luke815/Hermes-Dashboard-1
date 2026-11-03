@@ -285,6 +285,12 @@
     <p class="lead" id="rel-lead">Alt returns against BTC, ETH and SOL.</p>
     <div id="rel-box"></div>
   </section>
+  
+  <section>
+    <h2>Strongest and weakest right now</h2>
+    <p class="lead">Against BTC, on the last completed hour and the last four hours. Eleven names.</p>
+    <div id="leaders-box"></div>
+  </section>
   <section>
     <h2>Factors</h2>
     <p class="lead" id="factors-lead">Each factor is a rolling z-score squashed to -1 to +1. Out-of-sample spread is top minus bottom quintile, 10-day forward return, second half of the history.</p>
@@ -684,6 +690,15 @@ function renderRelative(d) {
   document.getElementById('rel-box').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Asset</th><th class="num">90d return</th><th class="num">vs BTC</th><th class="num">vs ETH</th><th class="num">vs SOL</th></tr></thead><tbody>' + body + '</tbody></table></div>';
 }
 
+
+function renderLeaders(d) {
+  const box = document.getElementById('leaders-box');
+  if (!box || !d.leaders) return;
+  const col = (title, rows) => '<div><div class="k">' + title + '</div>' + rows.map(r => '<div class="' + (r.vs_btc >= 0 ? 'pos' : 'neg') + '">' + r.symbol + ' ' + (r.vs_btc > 0 ? '+' : '') + r.vs_btc.toFixed(2) + '%</div>').join('') + '</div>';
+  const pane = (label, x) => '<div><div class="k">' + label + ', BTC ' + x.btc + '%</div>' + col('Strongest', x.strongest) + col('Weakest', x.weakest) + '</div>';
+  box.innerHTML = '<div class="strip">' + pane('Last hour', d.leaders.hour) + pane('Last 4 hours', d.leaders.four_hour) + '</div>';
+}
+
 function renderFactors(d) {
   const f = d.factors || []; if (!f.length) { $('#t-factors').outerHTML = '<div class="empty">No factor table in data.json.</div>'; return; }
   const maxC = Math.max(0.0001, ...f.map((x) => Math.abs((x.weight || 0) * (x.value || 0))));
@@ -821,7 +836,7 @@ try { const t = localStorage.getItem('heat-theme'); if (t) document.documentElem
 loadData().then((d) => {
   renderHeader(d); renderHero(d);
   if (window.LightweightCharts) renderCharts(d); else document.querySelectorAll('.pane').forEach((p) => p.innerHTML = '<div class="empty">Chart library did not load.</div>');
-  renderIdeas(d); renderWatchlist(d); renderRelative(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderJobs(d);
+  renderIdeas(d); renderWatchlist(d); renderRelative(d); renderLeaders(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderJobs(d);
 });
 </script>
 </body>
