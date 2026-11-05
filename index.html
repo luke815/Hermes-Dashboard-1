@@ -293,6 +293,22 @@
   </section>
 
   <section>
+    <h2>Long / short book</h2>
+    <p class="lead" id="book-lead">The long leg, the short leg and the pairs between them, rebalanced weekly and paper-tracked from the first day. Provisional until the strategy backtest admits the rule.</p>
+    <div class="strip" id="book-strip"></div>
+    <div class="two book-grid" style="margin-top:14px">
+      <div><h3 class="sub-h">Long leg</h3><div id="book-longs"></div></div>
+      <div><h3 class="sub-h">Short leg</h3><div id="book-shorts"></div></div>
+    </div>
+    <h3 class="sub-h" style="margin-top:14px">Pairs</h3>
+    <div id="book-pairs"></div>
+    <div class="two" style="margin-top:14px">
+      <div><h3 class="sub-h">Components</h3><div id="book-comp"></div></div>
+      <div><h3 class="sub-h">Backtest, by year</h3><div id="book-bt"></div></div>
+    </div>
+  </section>
+
+  <section>
     <h2>Trade ideas</h2>
     <p class="lead" id="ideas-lead">Names the setup library flags as ready for a run or a short. Each idea carries the setup's own out-of-sample record, the features that fired, and the level that takes it off the list.</p>
     <div class="two ideas-grid">
@@ -744,6 +760,33 @@ function renderAlts(d) {
   if (d.alt_ranking_note) $('#alts-lead').textContent = d.alt_ranking_note;
 }
 
+function renderBook(d) {
+  const B = d.book;
+  const empty = (msg) => '<div class="empty">' + esc(msg) + '</div>';
+  if (!B) { $('#book-strip').style.display = 'none'; ['#book-longs', '#book-shorts', '#book-pairs', '#book-comp', '#book-bt'].forEach((id) => $(id).innerHTML = empty('No book yet. It appears once the composite score and the leg rules are built.')); return; }
+  const st = B.stats || {};
+  const tile = (k, v, n) => '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div><div class="n">' + esc(n || '') + '</div></div>';
+  $('#book-strip').innerHTML =
+    tile('Status', '<span class="status ' + (B.status === 'admitted' ? 'active' : 'watch') + '">' + esc(B.status || 'provisional') + '</span>', B.rebalance ? esc(B.rebalance) + (B.next_rebalance ? ', next ' + esc(B.next_rebalance) : '') : '') +
+    tile('Gross, net beta', (st.gross != null ? fmt.num(st.gross, 2) + 'x' : '–') + ', ' + (st.net_beta != null ? fmt.sgn(st.net_beta, 2) : '–'), (st.long_gross != null ? 'long ' + Math.round(st.long_gross * 100) + '% / short ' + Math.round((st.short_gross || 0) * 100) + '%' : '')) +
+    tile('Carry, annualized', st.carry_annualized != null ? '<span class="' + cls(st.carry_annualized) + '">' + fmt.pct(st.carry_annualized, 1) + '</span>' : '–', 'short funding received minus long funding paid') +
+    tile('Paper return', st.paper_return != null ? '<span class="' + cls(st.paper_return) + '">' + fmt.pct(st.paper_return, 1) + '</span>' : '–', (st.paper_since ? 'since ' + esc(st.paper_since) : '') + (st.paper_dd != null ? ', drawdown ' + fmt.pct(st.paper_dd, 1) : '')) +
+    tile('Sharpe', (st.live_sharpe != null ? fmt.num(st.live_sharpe, 2) + ' live' : '–'), (st.backtest_sharpe_val != null ? 'backtest ' + fmt.num(st.backtest_sharpe_val, 2) + ' validation, ' + (st.backtest_sharpe_test != null ? fmt.num(st.backtest_sharpe_test, 2) : '–') + ' test' : 'backtest pending'));
+  if (B.lead) $('#book-lead').textContent = B.lead;
+  const leg = (rows, side) => {
+    if (!rows || !rows.length) return empty(side === 'long' ? 'No name passes the long rules today.' : 'No name passes the short rules today.');
+    const b = rows.map((r) => '<tr><td class="sym">' + esc(r.symbol) + (r.sector ? '<div class="mute" style="font-size:12px">' + esc(r.sector) + '</div>' : '') + '</td><td class="num">' + fmt.num(r.score, 2) + (r.decile != null ? '<div class="mute" style="font-size:12px">decile ' + r.decile + '</div>' : '') + '</td><td class="num ' + cls(r.rs_30) + '">' + fmt.pct(r.rs_30, 1) + '</td><td class="num">' + (r.funding_pct != null ? Math.round(r.funding_pct * 100) + 'th' : '–') + '</td><td class="num">' + (r.oi_usd != null ? (r.oi_usd / 1e6).toFixed(0) + 'm' : '–') + '</td><td class="num">' + (r.beta != null ? fmt.num(r.beta, 2) : '–') + '</td><td class="num">' + (r.size != null ? Math.round(r.size * 100) + '%' : '–') + '</td><td class="wrap" style="min-width:140px">' + esc(r.entry || '') + (r.stop ? '<div class="mute" style="font-size:12px">' + esc(r.stop) + '</div>' : '') + '</td></tr>').join('');
+    return '<div class="tbl-wrap"><table><thead><tr><th>Asset</th><th class="num">Score</th><th class="num">RS 30d</th><th class="num">Funding pct</th><th class="num">OI</th><th class="num">Beta</th><th class="num">Size</th><th>Entry, stop</th></tr></thead><tbody>' + b + '</tbody></table></div>';
+  };
+  $('#book-longs').innerHTML = leg(B.longs, 'long'); $('#book-shorts').innerHTML = leg(B.shorts, 'short');
+  const pairs = B.pairs || [];
+  $('#book-pairs').innerHTML = pairs.length ? '<div class="tbl-wrap"><table><thead><tr><th>Long</th><th>Short</th><th>Sector</th><th class="num">Hedge ratio</th><th class="num">Spread 30d</th><th class="num">Carry</th><th>Note</th></tr></thead><tbody>' + pairs.map((p) => '<tr><td class="side-long">' + esc(p.long) + '</td><td class="side-short">' + esc(p.short) + '</td><td>' + esc(p.sector || '') + '</td><td class="num">' + fmt.num(p.hedge_ratio, 2) + '</td><td class="num ' + cls(p.spread_30d) + '">' + fmt.pct(p.spread_30d, 1) + '</td><td class="num ' + cls(p.carry_annualized) + '">' + fmt.pct(p.carry_annualized, 1) + '</td><td class="wrap">' + esc(p.note || '') + '</td></tr>').join('') + '</tbody></table></div>' : empty('No pairs today.');
+  const comps = B.components || [];
+  $('#book-comp').innerHTML = comps.length ? '<div class="tbl-wrap"><table><thead><tr><th>Component</th><th class="num">Weight</th><th class="num">Train t</th><th class="num">n</th><th>Status</th></tr></thead><tbody>' + comps.map((c) => '<tr><td>' + esc(c.name) + '</td><td class="num">' + (c.weight != null ? Math.round(c.weight * 100) + '%' : '–') + '</td><td class="num">' + fmt.num(c.train_t, 2) + '</td><td class="num">' + (c.train_n ?? '–') + '</td><td><span class="status ' + (c.status === 'admitted' ? 'active' : c.status === 'rejected' ? 'dropped' : 'watch') + '">' + esc(c.status || 'pending') + '</span></td></tr>').join('') + '</tbody></table></div>' : empty('No component statistics yet.');
+  const by = (B.backtest && B.backtest.by_year) || [];
+  $('#book-bt').innerHTML = by.length ? '<div class="tbl-wrap"><table><thead><tr><th>Year</th><th class="num">Net return</th><th class="num">Sharpe</th><th class="num">Max DD</th><th class="num">Carry</th><th class="num">Long / short</th></tr></thead><tbody>' + by.map((y) => '<tr><td>' + esc(y.year) + '</td><td class="num ' + cls(y.net) + '">' + fmt.pct(y.net, 1) + '</td><td class="num">' + fmt.num(y.sharpe, 2) + '</td><td class="num neg">' + fmt.pct(y.max_dd, 1) + '</td><td class="num">' + fmt.pct(y.carry, 1) + '</td><td class="num">' + (y.long_attr != null ? fmt.pct(y.long_attr, 1) + ' / ' + fmt.pct(y.short_attr, 1) : '–') + '</td></tr>').join('') + '</tbody></table></div>' : empty('Backtest pending. The strategy backtester runs the book rule once the legs exist.');
+}
+
 function renderRelative(d) {
   let R = d.relative_strength;
   // fallback: build a board from the older leaders/relative keys so the section is never empty
@@ -901,7 +944,7 @@ try { const t = localStorage.getItem('heat-theme'); if (t) document.documentElem
 loadData().then((d) => {
   renderHeader(d); renderHero(d);
   if (window.LightweightCharts) renderCharts(d); else document.querySelectorAll('.pane').forEach((p) => p.innerHTML = '<div class="empty">Chart library did not load.</div>');
-  renderRelative(d); renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderQueue(d); renderJobs(d);
+  renderRelative(d); renderBook(d); renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderQueue(d); renderJobs(d);
 });
 </script>
 </body>
