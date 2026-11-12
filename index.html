@@ -254,6 +254,20 @@
   </div>
 
   <section>
+    <h2>Market internals</h2>
+    <p class="lead" id="int-lead">Breadth, funding, open interest and liquidations across the whole liquid universe, with each reading's place in its own one-year range. Data, not a model.</p>
+    <div class="strip" id="int-strip"></div>
+    <div class="pane short" style="margin-top:12px"><div class="readout" id="ro-int"></div><div class="title">Share of universe above its 50-day and 200-day averages</div><div class="chart" id="c-int"></div></div>
+  </section>
+
+  <section>
+    <h2>Cycle position</h2>
+    <p class="lead">Whether today is a candidate top or bottom day for BTC and for the universe, and what followed such days historically. Base rates from the episode counter, not forecasts.</p>
+    <div class="strip" id="cyc-strip"></div>
+    <p class="hint" id="cyc-note" style="margin-top:8px"></p>
+  </section>
+
+  <section>
     <h2>Price, heat and forecast</h2>
     <p class="lead">Drag to pan, scroll to zoom, all panes move together. Markers show the days heat crossed into or out of the hot and cold zones.</p>
     <div class="controls">
@@ -292,6 +306,16 @@
     <div id="rs-persist"></div>
     <h3 class="sub-h" style="margin-top:14px">Full board</h3>
     <div id="rs-table"></div>
+  </section>
+
+  <section>
+    <h2>Universe ranking</h2>
+    <p class="lead" id="ur-lead">Every liquid name scored by the composite, with the components and whether it passes the long and short rules. Provisional: the components are being tested by the sweep and the weights are equal until then.</p>
+    <div class="controls">
+      <div class="seg" id="ur-filter"><button data-f="all" aria-pressed="true">All</button><button data-f="top">Top decile</button><button data-f="bottom">Bottom decile</button><button data-f="long_ok">Passes long rules</button><button data-f="short_ok">Passes short rules</button></div>
+      <span class="hint" id="ur-asof"></span>
+    </div>
+    <div id="ur-box"></div>
   </section>
 
   <section>
@@ -374,6 +398,16 @@
       <div id="research-box"></div>
     </section>
   </div>
+
+  <section>
+    <h2>Sweep and confirmations</h2>
+    <p class="lead" id="sw-lead">What the search has covered, what leads on the train period, and what happened when leaders were confirmed out of sample. Train scores are not evidence; the confirmation column is.</p>
+    <div class="strip" id="sw-strip"></div>
+    <div class="two" style="margin-top:14px">
+      <div><h3 class="sub-h">Leaders on train, by family</h3><div id="sw-lead-box"></div></div>
+      <div><h3 class="sub-h">Latest confirmations</h3><div id="sw-conf-box"></div></div>
+    </div>
+  </section>
 
   <section>
     <h2>Research queue</h2>
@@ -800,6 +834,87 @@ function renderBook(d) {
   $('#book-bt').innerHTML = by.length ? '<div class="tbl-wrap"><table><thead><tr><th>Year</th><th class="num">Net return</th><th class="num">Sharpe</th><th class="num">Max DD</th><th class="num">Carry</th><th class="num">Long / short</th></tr></thead><tbody>' + by.map((y) => '<tr><td>' + esc(y.year) + '</td><td class="num ' + cls(y.net) + '">' + fmt.pct(y.net, 1) + '</td><td class="num">' + fmt.num(y.sharpe, 2) + '</td><td class="num neg">' + fmt.pct(y.max_dd, 1) + '</td><td class="num">' + fmt.pct(y.carry, 1) + '</td><td class="num">' + (y.long_attr != null ? fmt.pct(y.long_attr, 1) + ' / ' + fmt.pct(y.short_attr, 1) : '–') + '</td></tr>').join('') + '</tbody></table></div>' : empty('Backtest pending. The strategy backtester runs the book rule once the legs exist.');
 }
 
+function pctile(x) { return x == null ? '' : '<div class="n">' + Math.round(x * 100) + 'th pct of 1y</div>'; }
+function renderInternals(d) {
+  const I = d.internals;
+  const tile = (k, v, n) => '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div>' + (n || '') + '</div>';
+  if (!I) { $('#int-strip').innerHTML = '<div class="empty" style="grid-column:1/-1">No internals yet. Written daily from the full panel once the scheduler job exists.</div>'; $('#c-int').parentElement.style.display = 'none'; return; }
+  const b = I.breadth || {}, f = I.funding || {}, o = I.oi || {}, l = I.liquidations || {}, p = I.pct_1y || {};
+  $('#int-strip').innerHTML =
+    tile('Above 50-day', b.above_50d != null ? Math.round(b.above_50d * 100) + '%' : '–', pctile(p.above_50d)) +
+    tile('Above 200-day', b.above_200d != null ? Math.round(b.above_200d * 100) + '%' : '–', pctile(p.above_200d)) +
+    tile('30-day highs minus lows', b.new_highs_minus_lows != null ? '<span class="' + cls(b.new_highs_minus_lows) + '">' + fmt.sgn(b.new_highs_minus_lows * 100, 0) + '%</span>' : '–', pctile(p.new_highs_minus_lows)) +
+    tile('Median funding', f.median != null ? fmt.num(f.median, 4) : '–', (f.share_crowded != null ? '<div class="n">' + Math.round(f.share_crowded * 100) + '% of names above their 80th pct</div>' : '')) +
+    tile('Open interest', o.total_usd != null ? (o.total_usd / 1e9).toFixed(1) + 'bn' : '–', (o.change_7d != null ? '<div class="n ' + cls(o.change_7d) + '">' + fmt.pct(o.change_7d, 1) + ' over 7d' + (o.share_at_90d_high != null ? ', ' + Math.round(o.share_at_90d_high * 100) + '% of names at 90d high' : '') + '</div>' : '')) +
+    tile('Liquidations 24h', (l.long_usd != null ? (l.long_usd / 1e6).toFixed(0) + 'm long / ' + (l.short_usd / 1e6).toFixed(0) + 'm short' : '–'), pctile(p.liquidations));
+  if (I.universe_n) $('#int-lead').textContent = 'Breadth, funding, open interest and liquidations across ' + I.universe_n + ' liquid names, with each reading\u2019s place in its own one-year range. Data, not a model.' + (I.as_of ? ' As of ' + I.as_of + '.' : '');
+  const S = I.series;
+  if (!S || !S.date || !window.LightweightCharts) { $('#c-int').parentElement.style.display = 'none'; return; }
+  const ch = makeChartLocal('c-int');
+  const a = ch.addLineSeries({ color: css('--text'), lineWidth: 1.5, priceFormat: { type: 'custom', formatter: (v) => Math.round(v * 100) + '%' }, title: '50d' });
+  a.setData(toSeries(S.date, S.above_50d));
+  if (S.above_200d) { const bl = ch.addLineSeries({ color: css('--text-3'), lineWidth: 1, priceFormat: { type: 'custom', formatter: (v) => Math.round(v * 100) + '%' }, title: '200d' }); bl.setData(toSeries(S.date, S.above_200d)); }
+  const last = S.date.length - 1;
+  $('#ro-int').innerHTML = '<span><b>' + esc(S.date[last]) + '</b></span><span>above 50d <b>' + (S.above_50d[last] != null ? Math.round(S.above_50d[last] * 100) + '%' : '–') + '</b></span>' + (S.above_200d ? '<span>above 200d <b>' + (S.above_200d[last] != null ? Math.round(S.above_200d[last] * 100) + '%' : '–') + '</b></span>' : '');
+  ch.timeScale().fitContent();
+}
+function makeChartLocal(id) {
+  // a standalone pane, not synced with the main price panes
+  return LC.createChart(document.getElementById(id), baseOpts());
+}
+function renderCycle(d) {
+  const C = d.cycle;
+  const tile = (k, v, n) => '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div>' + (n ? '<div class="n">' + n + '</div>' : '') + '</div>';
+  if (!C) { $('#cyc-strip').innerHTML = '<div class="empty" style="grid-column:1/-1">No cycle readings yet. Written daily once the episode counter runs in the scheduler.</div>'; return; }
+  const b = C.btc || {}, u = C.universe || {};
+  const flag = (top, bot) => top ? '<span class="pill hot">candidate top</span>' : bot ? '<span class="pill cold">candidate bottom</span>' : '<span class="pill">neither</span>';
+  $('#cyc-strip').innerHTML =
+    tile('BTC today', flag(b.candidate_top, b.candidate_bottom), (b.dist_60d_high != null ? fmt.pct(b.dist_60d_high, 1) + ' from 60d high, ' + fmt.pct(b.dist_60d_low, 1) + ' from 60d low' : '')) +
+    tile('From BTC candidate tops', b.base_top_30d != null ? Math.round(b.base_top_30d * 100) + '%' : '–', 'saw a 20% drop within 30 days' + (b.n_top_episodes != null ? ', n=' + b.n_top_episodes + ' episodes' : '')) +
+    tile('From BTC candidate bottoms', b.base_bottom_30d != null ? Math.round(b.base_bottom_30d * 100) + '%' : '–', 'saw a 20% rally within 30 days' + (b.n_bottom_episodes != null ? ', n=' + b.n_bottom_episodes : '')) +
+    tile('Universe at 60d highs', u.share_at_60d_high != null ? Math.round(u.share_at_60d_high * 100) + '%' : '–', (u.share_at_60d_low != null ? Math.round(u.share_at_60d_low * 100) + '% at 60d lows' : '')) +
+    tile('Pooled base rates', (u.base_top_30d != null ? Math.round(u.base_top_30d * 100) + '% top' : '–') + (u.base_bottom_30d != null ? ', ' + Math.round(u.base_bottom_30d * 100) + '% bottom' : ''), (u.n_top_episodes != null ? 'n=' + u.n_top_episodes + ' / ' + (u.n_bottom_episodes ?? '–') + ' episodes, one per date cluster' : ''));
+  $('#cyc-note').textContent = C.note || '';
+}
+function renderUniverse(d) {
+  const U = d.universe_rank;
+  if (!U || !U.rows || !U.rows.length) { $('#ur-box').innerHTML = '<div class="empty">No universe ranking yet. Written daily by the book composite once it scores the full panel.</div>'; return; }
+  $('#ur-asof').textContent = (U.as_of ? 'As of ' + U.as_of + '. ' : '') + U.rows.length + ' names scored.' + (U.note ? ' ' + U.note : '');
+  let filter = 'all', sortK = 'score', dir = 'desc';
+  const cols = [['symbol', 'Asset', ''], ['sector', 'Sector', ''], ['score', 'Score', 'num'], ['decile', 'Decile', 'int'], ['rs_14', 'RS 14d', 'pct'], ['rs_30', 'RS 30d', 'pct'], ['oi_change_7d', 'OI 7d', 'pct'], ['funding_pct', 'Funding pct', 'pctl'], ['vol_trend', 'Vol trend', 'num'], ['range_pos', 'Range pos', 'num'], ['oi_usd', 'OI', 'usdm'], ['long_ok', 'Long', 'bool'], ['short_ok', 'Short', 'bool']];
+  const show = cols.filter(([k]) => U.rows.some((r) => r[k] != null));
+  function draw() {
+    let rows = U.rows.filter((r) => filter === 'all' ? true : filter === 'top' ? r.decile === 1 : filter === 'bottom' ? r.decile === 10 : !!r[filter]);
+    rows = rows.sort((a, b) => ((a[sortK] > b[sortK] ? 1 : a[sortK] < b[sortK] ? -1 : 0)) * (dir === 'asc' ? 1 : -1));
+    const h = show.map(([k, l, t]) => '<th class="sort ' + (t && t !== 'bool' ? 'num' : '') + '" data-k="' + k + '" ' + (k === sortK ? 'data-dir="' + dir + '"' : '') + '>' + l + '</th>').join('') + '<th>Why not</th>';
+    const b = rows.map((r) => '<tr>' + show.map(([k, , t]) => {
+      const v = r[k]; let txt = esc(v ?? '–'), c = t && t !== 'bool' ? 'num' : '';
+      if (t === 'pct') { txt = fmt.pct(v, 1); c += ' ' + cls(v); } else if (t === 'num') { txt = fmt.num(v, 2); } else if (t === 'int') { txt = v ?? '–'; } else if (t === 'pctl') { txt = v != null ? Math.round(v * 100) + 'th' : '–'; } else if (t === 'usdm') { txt = v != null ? (v / 1e6).toFixed(0) + 'm' : '–'; } else if (t === 'bool') { txt = v ? '<span class="pos">yes</span>' : '<span class="mute">no</span>'; }
+      return '<td class="' + c + '">' + txt + '</td>';
+    }).join('') + '<td class="wrap" style="min-width:200px">' + esc(r.reasons || '') + '</td></tr>').join('');
+    $('#ur-box').innerHTML = '<div class="tbl-wrap tall"><table><thead><tr>' + h + '</tr></thead><tbody>' + b + '</tbody></table></div>';
+    $('#ur-box').querySelectorAll('th.sort').forEach((th) => th.addEventListener('click', () => { const k = th.dataset.k; if (sortK === k) dir = dir === 'asc' ? 'desc' : 'asc'; else { sortK = k; dir = (k === 'symbol' || k === 'sector' || k === 'decile') ? 'asc' : 'desc'; } draw(); }));
+  }
+  const fb = $('#ur-filter').cloneNode(true); $('#ur-filter').replaceWith(fb);
+  fb.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { fb.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); filter = b.dataset.f; draw(); }));
+  draw();
+}
+function renderSweep(d) {
+  const W = d.sweep;
+  const tile = (k, v, n) => '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div>' + (n ? '<div class="n">' + esc(n) + '</div>' : '') + '</div>';
+  if (!W) { $('#sw-strip').innerHTML = '<div class="empty" style="grid-column:1/-1">No sweep statistics published yet.</div>'; $('#sw-lead-box').innerHTML = ''; $('#sw-conf-box').innerHTML = ''; return; }
+  const conf = W.confirmations || [];
+  const passed = conf.filter((c) => c.verdict === 'admitted').length;
+  $('#sw-strip').innerHTML =
+    tile('Cells scored', (W.cells_tested ?? 0).toLocaleString('en-US') + ' / ' + (W.cells_enumerated ?? W.cells_testable ?? 0).toLocaleString('en-US'), (W.cells_per_hour != null ? Math.round(W.cells_per_hour).toLocaleString('en-US') + ' per hour' : '') + (W.as_of ? ', as of ' + String(W.as_of).slice(0, 16).replace('T', ' ') : '')) +
+    tile('Not fragile, not duplicate', (W.eligible ?? '–').toLocaleString ? (W.eligible ?? 0).toLocaleString('en-US') : '–', (W.fragile != null ? W.fragile.toLocaleString('en-US') + ' fragile, ' + (W.duplicates ?? 0).toLocaleString('en-US') + ' duplicates' : '')) +
+    tile('Confirmations', conf.length + ' tried, ' + passed + ' admitted', (W.insufficient != null ? W.insufficient + ' insufficient and re-queued' : '')) +
+    tile('Bar now', (W.by_family || []).map((f) => esc(f.family) + ' ' + fmt.num(f.threshold_now, 1)).join(', ') || '–', 'validation t required, by family');
+  const lb = W.leaderboard || [];
+  $('#sw-lead-box').innerHTML = lb.length ? '<div class="tbl-wrap tall"><table><thead><tr><th>Family</th><th>Rule</th><th>Target</th><th>Universe</th><th class="num">Train score</th><th class="num">n</th><th>Status</th></tr></thead><tbody>' + lb.map((r) => '<tr><td>' + esc(r.family) + '</td><td class="wrap" style="min-width:200px;color:var(--text)">' + esc(r.rule || r.cell_id) + '</td><td>' + esc(r.target) + '</td><td>' + esc(r.universe) + '</td><td class="num">' + fmt.num(r.train_score, 2) + '</td><td class="num">' + (r.train_n ?? '–') + '</td><td><span class="status ' + (r.status === 'admitted' ? 'active' : r.status === 'rejected' ? 'dropped' : r.status === 'insufficient' ? 'watch' : '') + '">' + esc(r.status || 'unconfirmed') + '</span></td></tr>').join('') + '</tbody></table></div>' : '<div class="empty">No leaderboard yet.</div>';
+  $('#sw-conf-box').innerHTML = conf.length ? '<div class="tbl-wrap tall"><table><thead><tr><th>Date</th><th>Cell</th><th class="num">Validation t</th><th class="num">Bar</th><th class="num">n</th><th>Verdict</th></tr></thead><tbody>' + conf.map((c) => '<tr><td>' + esc(c.date) + '</td><td class="wrap" style="min-width:220px;color:var(--text)">' + esc(c.cell_id) + '</td><td class="num">' + fmt.num(c.validation_t, 2) + '</td><td class="num">' + fmt.num(c.bar, 2) + '</td><td class="num">' + (c.n ?? '–') + '</td><td><span class="status ' + (c.verdict === 'admitted' ? 'active' : c.verdict === 'insufficient' ? 'watch' : 'dropped') + '">' + esc(c.verdict) + '</span></td></tr>').join('') + '</tbody></table></div>' : '<div class="empty">No confirmations yet.</div>';
+}
+
 function renderRelative(d) {
   let R = d.relative_strength;
   // fallback: build a board from the older leaders/relative keys so the section is never empty
@@ -985,7 +1100,7 @@ async function pollLive(d) {
 loadData().then((d) => {
   renderHeader(d); renderHero(d);
   if (window.LightweightCharts) renderCharts(d); else document.querySelectorAll('.pane').forEach((p) => p.innerHTML = '<div class="empty">Chart library did not load.</div>');
-  renderRelative(d); renderBook(d); renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderQueue(d); renderJobs(d);
+  renderInternals(d); renderCycle(d); renderRelative(d); renderUniverse(d); renderBook(d); renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderSweep(d); renderQueue(d); renderJobs(d);
   if (!d.sample) { pollLive(d); setInterval(() => pollLive(d), LIVE_POLL_MS); setInterval(() => { if (lastLiveAt && d.live) paintLive(true, d.live.as_of, ''); }, 15000); }
   else paintLive(false, null, 'sample');
 });
