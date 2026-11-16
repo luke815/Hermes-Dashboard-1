@@ -132,6 +132,24 @@
   .idea .drivers span { font-size: 12px; border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 6px; color: var(--text-2); }
   .idea .num { font-size: 15px; font-weight: 500; text-align: right; } .idea .num small { display: block; color: var(--text-3); font-weight: 400; font-size: 12px; }
   .side-long { color: var(--up); } .side-short { color: var(--down); }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .mini { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; }
+  .mini h4 { margin: 0 0 6px; font-size: 13px; font-weight: 500; color: var(--text-2); }
+  .mini .row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 3px 0; border-bottom: 1px solid var(--line-soft); }
+  .mini .row:last-child { border-bottom: 0; }
+  .mini .row .sym { font-weight: 500; } .mini .row .aux { color: var(--text-3); font-size: 12px; }
+  .spark { width: 110px; height: 26px; vertical-align: middle; }
+  .cand { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px 14px; margin-bottom: 10px; }
+  .cand .head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+  .cand .rule { font-weight: 500; } .cand .meta { color: var(--text-2); font-size: 13px; }
+  .cand .names { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .cand .names span { border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; font-size: 13px; }
+  .cand .names span small { color: var(--text-3); margin-left: 4px; }
+  .cand .shadow { margin-top: 8px; font-size: 12px; color: var(--text-3); }
+  .dialband { position: relative; height: 12px; border-radius: 6px; border: 1px solid var(--line); background: linear-gradient(90deg, var(--cold) 0%, var(--raised) 45%, var(--hot) 100%); margin: 26px 0 22px; }
+  .dialband .mk { position: absolute; top: -8px; width: 4px; height: 28px; border-radius: 2px; background: var(--text); transform: translateX(-50%); box-shadow: 0 0 0 3px var(--canvas); }
+  .dialband .mv { position: absolute; top: -32px; transform: translateX(-50%); font-size: 20px; font-weight: 600; }
+  .dialband .tk { position: absolute; top: 16px; transform: translateX(-50%); font-size: 11px; color: var(--text-3); }
   .rs-list { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
   .rs-row { display: grid; grid-template-columns: 28px 70px 1fr 90px; gap: 10px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
   .rs-row:last-child { border-bottom: 0; }
@@ -254,6 +272,12 @@
   </div>
 
   <section>
+    <h2>Risk dial</h2>
+    <p class="lead" id="risk-lead">Gross exposure the regime rules would run today, with the state behind it and the inputs that set it. Provisional until the exposure backtest admits the rule; the paper track starts from the first reading either way.</p>
+    <div id="risk-box"></div>
+  </section>
+
+  <section>
     <h2>Market internals</h2>
     <p class="lead" id="int-lead">Breadth, funding, open interest and liquidations across the whole liquid universe, with each reading's place in its own one-year range. Data, not a model.</p>
     <div class="strip" id="int-strip"></div>
@@ -265,6 +289,12 @@
     <p class="lead">Whether today is a candidate top or bottom day for BTC and for the universe, and what followed such days historically. Base rates from the episode counter, not forecasts.</p>
     <div class="strip" id="cyc-strip"></div>
     <p class="hint" id="cyc-note" style="margin-top:8px"></p>
+  </section>
+
+  <section>
+    <h2>Derivatives and options</h2>
+    <p class="lead" id="deriv-lead">Where positioning sits for BTC and ETH: implied against realized vol, skew, basis, funding, open interest. Each with its one-year percentile and the last 30 days. The sweep is testing these as signals; here they are shown as readings.</p>
+    <div id="deriv-box"></div>
   </section>
 
   <section>
@@ -281,6 +311,12 @@
     <div class="pane"><div class="readout" id="ro-price"></div><div class="title">BTC and ETH, USD</div><div class="chart" id="c-price"></div></div>
     <div class="pane short"><div class="readout" id="ro-heat"></div><div class="title">Heat, -1 to +1</div><div class="chart" id="c-heat"></div></div>
     <div class="pane short"><div class="readout" id="ro-fc"></div><div class="title">Expected BTC return, next 10 days. Full colour where heat was in the hot zone, faded where the forecast has not held.</div><div class="chart" id="c-fc"></div></div>
+  </section>
+
+  <section>
+    <h2>What followed this heat before</h2>
+    <p class="lead" id="hs-lead">Forward BTC returns by heat zone, with independent counts, split by period. The honest replacement for a forecast: a distribution, not a number.</p>
+    <div id="hs-box"></div>
   </section>
 
   <section>
@@ -309,6 +345,18 @@
   </section>
 
   <section>
+    <h2>Extremes across the universe</h2>
+    <p class="lead" id="ext-lead">Today's outliers in crowding, participation and stretch, from the full liquid universe. These are the raw conditions the setup rules are built from, shown before any rule is admitted.</p>
+    <div id="ext-box"></div>
+  </section>
+
+  <section>
+    <h2>Candidate signals, unconfirmed</h2>
+    <p class="lead" id="cand-lead">The cells leading the sweep on the train period and the names they flag today. Train statistics are not evidence. Each cell carries a shadow record from the day it first appeared here, so by the time confirmation finishes there is a live track beside the backtest.</p>
+    <div id="cand-box"></div>
+  </section>
+
+  <section>
     <h2>Universe ranking</h2>
     <p class="lead" id="ur-lead">Every liquid name scored by the composite, with the components and whether it passes the long and short rules. Provisional: the components are being tested by the sweep and the weights are equal until then.</p>
     <div class="controls">
@@ -332,6 +380,28 @@
       <div><h3 class="sub-h">Components</h3><div id="book-comp"></div></div>
       <div><h3 class="sub-h">Backtest, by year</h3><div id="book-bt"></div></div>
     </div>
+  </section>
+
+  <section>
+    <h2>Pair trade calculator</h2>
+    <p class="lead" id="pair-lead">Size a long against a short with the market exposure hedged out. Betas and the spread statistics are computed in the browser from daily closes; carry from the latest 7-day funding. Arithmetic, not a signal.</p>
+    <div class="controls" style="align-items:center">
+      <label class="hint">Long <select id="pt-long"></select></label>
+      <label class="hint">Short <select id="pt-short"></select></label>
+      <label class="hint">Window <select id="pt-win"><option value="60">60d</option><option value="90" selected>90d</option><option value="180">180d</option></select></label>
+      <label class="hint">Hedge <select id="pt-mode"><option value="beta">beta-neutral to BTC</option><option value="dollar">dollar-neutral</option><option value="vol">vol-neutral</option><option value="reg">regression on short</option></select></label>
+      <label class="hint">Capital $ <input id="pt-cap" type="number" value="100000" step="1000" style="width:110px;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:4px 6px"></label>
+      <label class="hint">Stop, daily spread vols <input id="pt-stop" type="number" value="2.5" step="0.5" style="width:60px;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:4px 6px"></label>
+    </div>
+    <div class="strip" id="pt-strip"></div>
+    <div class="two" style="margin-top:12px">
+      <div><h3 class="sub-h">Legs</h3><div id="pt-legs"></div></div>
+      <div><h3 class="sub-h">Spread diagnostics</h3><div id="pt-diag"></div></div>
+    </div>
+    <div class="pane short" style="margin-top:12px"><div class="readout" id="ro-pt"></div><div class="title">Spread z-score over the window, with the 2-sigma bands</div><div class="chart" id="c-pt"></div></div>
+    <h3 class="sub-h" style="margin-top:14px">Pairs board</h3>
+    <p class="hint" style="margin:0 0 8px" id="pb-lead">Screened daily across the universe: mean-reversion candidates (cointegrated, short half-life, stretched z) and relative-strength spreads. Written by the agent; empty until the pairs job exists.</p>
+    <div id="pb-box"></div>
   </section>
 
   <section>
@@ -834,6 +904,76 @@ function renderBook(d) {
   $('#book-bt').innerHTML = by.length ? '<div class="tbl-wrap"><table><thead><tr><th>Year</th><th class="num">Net return</th><th class="num">Sharpe</th><th class="num">Max DD</th><th class="num">Carry</th><th class="num">Long / short</th></tr></thead><tbody>' + by.map((y) => '<tr><td>' + esc(y.year) + '</td><td class="num ' + cls(y.net) + '">' + fmt.pct(y.net, 1) + '</td><td class="num">' + fmt.num(y.sharpe, 2) + '</td><td class="num neg">' + fmt.pct(y.max_dd, 1) + '</td><td class="num">' + fmt.pct(y.carry, 1) + '</td><td class="num">' + (y.long_attr != null ? fmt.pct(y.long_attr, 1) + ' / ' + fmt.pct(y.short_attr, 1) : '–') + '</td></tr>').join('') + '</tbody></table></div>' : empty('Backtest pending. The strategy backtester runs the book rule once the legs exist.');
 }
 
+function spark(vals, color) {
+  const v = (vals || []).filter((x) => x != null && !isNaN(x)); if (v.length < 2) return '';
+  const mn = Math.min(...v), mx = Math.max(...v), rng = mx - mn || 1, w = 110, h = 26;
+  const pts = v.map((x, i) => (i / (v.length - 1) * w).toFixed(1) + ',' + (h - 2 - (x - mn) / rng * (h - 4)).toFixed(1)).join(' ');
+  return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '"><polyline fill="none" stroke="' + (color || css('--text-2')) + '" stroke-width="1.5" points="' + pts + '"/></svg>';
+}
+function renderRisk(d) {
+  const R = d.risk;
+  if (!R) { $('#risk-box').innerHTML = '<div class="empty">No risk reading yet. Written daily once the regime inputs job runs.</div>'; return; }
+  const dial = R.dial != null ? R.dial : null; const left = dial == null ? 50 : Math.max(0, Math.min(100, dial / 1.3 * 100));
+  const inputs = R.inputs || [];
+  const stateName = String(R.state || '').replace(/_/g, ' ');
+  const pill = /risk_on/.test(R.state || '') ? 'hot' : /risk_off|defensive/.test(R.state || '') ? 'cold' : '';
+  const tile = (k, v, n) => '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div>' + (n ? '<div class="n">' + n + '</div>' : '') + '</div>';
+  let html = '<div class="dialband"><div class="mv" style="left:' + left + '%">' + (dial != null ? Math.round(dial * 100) + '%' : '–') + '</div><div class="mk" style="left:' + left + '%"></div>' +
+    [0, 0.3, 0.6, 0.8, 1.0, 1.3].map((t) => '<div class="tk" style="left:' + (t / 1.3 * 100) + '%">' + Math.round(t * 100) + '</div>').join('') + '</div>';
+  html += '<div class="strip">' +
+    tile('State', '<span class="pill ' + pill + '">' + esc(stateName || 'unknown') + '</span>', (R.days_in_state != null ? R.days_in_state + ' days' : '') + (R.changed_on ? ', since ' + esc(R.changed_on) : '')) +
+    tile('Vol scalar', R.vol_scalar != null ? fmt.num(R.vol_scalar, 2) : '–', 'target vol over realized, capped 0.5 to 1.3') +
+    tile('Emergency cut', R.emergency_cut ? '<span class="neg">active</span>' : 'none', 'a third of gross on a cascade or a 1st-percentile day') +
+    tile('Backtest', esc((R.backtest && R.backtest.status) || 'pending'), (R.backtest && R.backtest.summary) ? esc(R.backtest.summary) : 'provisional until admitted') +
+    tile('Paper track', (R.paper && R.paper.return != null) ? '<span class="' + cls(R.paper.return) + '">' + fmt.pct(R.paper.return, 1) + '</span>' : '–', (R.paper && R.paper.since ? 'since ' + esc(R.paper.since) + (R.paper.hold_return != null ? ', hold ' + fmt.pct(R.paper.hold_return, 1) : '') : '')) + '</div>';
+  if (R.rules_fired && R.rules_fired.length) html += '<p class="hint" style="margin:10px 0 6px">Rules fired: ' + R.rules_fired.map(esc).join('; ') + '</p>';
+  if (inputs.length) html += '<div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>Input</th><th class="num">Value</th><th class="num">1y pct</th><th>Flag</th><th>Effect</th></tr></thead><tbody>' + inputs.map((i) => '<tr><td>' + esc(i.name) + '</td><td class="num">' + (typeof i.value === 'number' ? fmt.num(i.value, Math.abs(i.value) < 10 ? 2 : 1) : esc(i.value ?? '–')) + '</td><td class="num">' + (i.pct != null ? Math.round(i.pct * 100) + 'th' : '–') + '</td><td>' + esc(i.flag || '') + '</td><td class="' + (/off|capit/.test(i.effect || '') ? 'neg' : /on/.test(i.effect || '') ? 'pos' : 'mute') + '">' + esc(i.effect || '') + '</td></tr>').join('') + '</tbody></table></div>';
+  if (R.analogs && R.analogs.length) html += '<h3 class="sub-h" style="margin-top:12px">Analogs: same state, recent dates</h3><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>State</th><th class="num">Next 10d</th><th class="num">Next 30d</th></tr></thead><tbody>' + R.analogs.map((a) => '<tr><td>' + esc(a.date) + '</td><td>' + esc(String(a.state || '').replace(/_/g, ' ')) + '</td><td class="num ' + cls(a.fwd_10) + '">' + fmt.pct(a.fwd_10, 1) + '</td><td class="num ' + cls(a.fwd_30) + '">' + fmt.pct(a.fwd_30, 1) + '</td></tr>').join('') + '</tbody></table></div>';
+  if (R.as_of) $('#risk-lead').textContent += ' As of ' + R.as_of + '.';
+  $('#risk-box').innerHTML = html;
+}
+function renderDerivs(d) {
+  const D = d.derivatives;
+  if (!D || !D.assets) { $('#deriv-box').innerHTML = '<div class="empty">No derivatives panel yet. Written daily from the Laevitas series on disk.</div>'; return; }
+  const assets = Object.keys(D.assets);
+  const dec = (r) => r.decimals != null ? r.decimals : (typeof r.value === 'number' && Math.abs(r.value) < 0.1 ? 4 : Math.abs(r.value) < 10 ? 2 : 1);
+  const html = assets.map((a) => {
+    const rows = D.assets[a] || [];
+    return '<div class="tbl-wrap" style="margin-bottom:12px"><table><thead><tr><th>' + esc(a) + '</th><th class="num">Now</th><th class="num">1d</th><th class="num">7d</th><th class="num">1y pct</th><th>30 days</th><th>Read</th></tr></thead><tbody>' + rows.map((r) => '<tr><td>' + esc(r.name) + '</td><td class="num">' + (typeof r.value === 'number' ? fmt.num(r.value, dec(r)) + (r.unit === '%' ? '%' : '') : esc(r.value ?? '–')) + '</td><td class="num ' + cls(r.chg_1d) + '">' + (r.chg_1d != null ? fmt.sgn(r.chg_1d, dec(r)) : '–') + '</td><td class="num ' + cls(r.chg_7d) + '">' + (r.chg_7d != null ? fmt.sgn(r.chg_7d, dec(r)) : '–') + '</td><td class="num">' + (r.pct_1y != null ? Math.round(r.pct_1y * 100) + 'th' : '–') + '</td><td>' + spark(r.spark) + '</td><td class="wrap" style="min-width:160px">' + esc(r.note || '') + '</td></tr>').join('') + '</tbody></table></div>';
+  }).join('');
+  if (D.as_of) $('#deriv-lead').textContent += ' As of ' + D.as_of + '.';
+  $('#deriv-box').innerHTML = html;
+}
+function renderHeatStats(d) {
+  const H = d.heat_stats;
+  if (!H || !H.rows || !H.rows.length) { $('#hs-box').innerHTML = '<div class="empty">No heat statistics yet. Written daily from the panel.</div>'; return; }
+  const zones = ['hot', 'mid', 'cold'], periods = [...new Set(H.rows.map((r) => r.period))], horizons = [...new Set(H.rows.map((r) => r.horizon))];
+  const cell = (z, h, p) => { const r = H.rows.find((x) => x.zone === z && x.horizon === h && x.period === p); return r ? '<td class="num ' + cls(r.mean) + '">' + fmt.pct(r.mean, 1) + '<div class="mute" style="font-size:11px">' + Math.round((r.hit || 0) * 100) + '% up, n=' + (r.n ?? '–') + '</div></td>' : '<td class="num mute">–</td>'; };
+  let html = '<div class="tbl-wrap"><table><thead><tr><th>Zone</th>' + periods.map((p) => horizons.map((h) => '<th class="num">' + esc(p) + ', ' + esc(h) + '</th>').join('')).join('') + '</tr></thead><tbody>' +
+    zones.map((z) => '<tr' + (z === H.current_zone ? ' style="background:var(--raised)"' : '') + '><td>' + z + (z === H.current_zone ? ' <span class="pill">now</span>' : '') + '</td>' + periods.map((p) => horizons.map((h) => cell(z, h, p)).join('')).join('') + '</tr>').join('') + '</tbody></table></div>';
+  if (H.note) html += '<p class="hint" style="margin-top:8px">' + esc(H.note) + '</p>';
+  $('#hs-box').innerHTML = html;
+}
+function renderExtremes(d) {
+  const E = d.extremes;
+  if (!E || !E.lists) { $('#ext-box').innerHTML = '<div class="empty">No extremes board yet. Written daily from the universe panel.</div>'; return; }
+  const titles = { crowded_longs: 'Crowded longs: funding at the top of its range', crowded_shorts: 'Crowded shorts: funding deeply negative', volume_surges: 'Volume surges vs 30-day median', oi_builds: 'Open interest building', oi_flushes: 'Open interest flushed, 7 days', stretched_up: 'Stretched above 20-day, in ATR', stretched_down: 'Stretched below 20-day, in ATR', new_highs: 'New 30-day highs', new_lows: 'New 30-day lows', squeezes: 'Compression: Bollinger width in its bottom 15th pct' };
+  const html = Object.keys(E.lists).map((k) => { const rows = E.lists[k] || []; return '<div class="mini"><h4>' + esc(titles[k] || k) + '</h4>' + (rows.length ? rows.slice(0, 10).map((r) => '<div class="row"><span class="sym">' + esc(r.symbol) + '</span><span>' + esc(r.value) + (r.aux ? ' <span class="aux">' + esc(r.aux) + '</span>' : '') + '</span></div>').join('') : '<div class="row mute">none today</div>') + '</div>'; }).join('');
+  if (E.as_of) $('#ext-lead').textContent += ' As of ' + E.as_of + ', ' + (E.universe_n || '') + ' names.';
+  $('#ext-box').innerHTML = '<div class="grid3">' + html + '</div>';
+}
+function renderCandidates(d) {
+  const C = d.candidates;
+  if (!C || !C.cells || !C.cells.length) { $('#cand-box').innerHTML = '<div class="empty">No candidate cells published yet. They come from the leaderboard once a pass has run.</div>'; return; }
+  const html = C.cells.map((c) => {
+    const sh = c.shadow || {};
+    return '<div class="cand"><div class="head"><span class="rule">' + esc(c.rule || c.cell_id) + ' <span class="' + (c.side === 'fade' ? 'side-short' : 'side-long') + '">' + esc(c.side || '') + '</span></span><span class="meta">' + esc(c.family || '') + ', ' + esc(c.horizon || '') + ', ' + esc(c.universe || '') + ' · train net ' + fmt.pct(c.train_net, 2) + ' (gross ' + fmt.pct(c.train_gross, 2) + '), t ' + fmt.num(c.train_t, 1) + ', n ' + (c.train_n ?? '–') + ' · <span class="status ' + (c.status === 'admitted' ? 'active' : c.status === 'rejected' ? 'dropped' : 'watch') + '">' + esc(c.status || 'unconfirmed') + '</span></span></div>' +
+      (c.names && c.names.length ? '<div class="names">' + c.names.slice(0, 15).map((n) => '<span>' + esc(n.symbol) + '<small>' + esc(n.value ?? '') + '</small></span>').join('') + (c.names.length > 15 ? '<span class="mute">+' + (c.names.length - 15) + '</span>' : '') + '</div>' : '<div class="shadow">no name flagged today</div>') +
+      '<div class="shadow">' + (sh.since ? 'Shadow since ' + esc(sh.since) + ': ' + (sh.n_fires ?? 0) + ' fires, ' + (sh.hit_rate != null ? Math.round(sh.hit_rate * 100) + '% hit, ' : '') + 'net ' + fmt.pct(sh.net_return, 2) + (sh.vs_backtest ? ', ' + esc(sh.vs_backtest) : '') : 'Shadow record starts today.') + '</div></div>';
+  }).join('');
+  if (C.as_of) $('#cand-lead').textContent += ' As of ' + C.as_of + '.';
+  $('#cand-box').innerHTML = html;
+}
 function pctile(x) { return x == null ? '' : '<div class="n">' + Math.round(x * 100) + 'th pct of 1y</div>'; }
 function renderInternals(d) {
   const I = d.internals;
@@ -875,6 +1015,10 @@ function renderCycle(d) {
     tile('Universe at 60d highs', u.share_at_60d_high != null ? Math.round(u.share_at_60d_high * 100) + '%' : '–', (u.share_at_60d_low != null ? Math.round(u.share_at_60d_low * 100) + '% at 60d lows' : '')) +
     tile('Pooled base rates', (u.base_top_30d != null ? Math.round(u.base_top_30d * 100) + '% top' : '–') + (u.base_bottom_30d != null ? ', ' + Math.round(u.base_bottom_30d * 100) + '% bottom' : ''), (u.n_top_episodes != null ? 'n=' + u.n_top_episodes + ' / ' + (u.n_bottom_episodes ?? '–') + ' episodes, one per date cluster' : ''));
   $('#cyc-note').textContent = C.note || '';
+  if (C.analogs && C.analogs.length) {
+    const t = document.createElement('div'); t.innerHTML = '<h3 class="sub-h" style="margin-top:12px">Analogs: the last ten days that looked like today</h3><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Flag</th><th class="num">Next 10d</th><th class="num">Next 30d</th><th class="num">Max drawdown 30d</th><th class="num">Max run-up 30d</th></tr></thead><tbody>' + C.analogs.map((a) => '<tr><td>' + esc(a.date) + '</td><td>' + esc(a.flag || '') + '</td><td class="num ' + cls(a.fwd_10) + '">' + fmt.pct(a.fwd_10, 1) + '</td><td class="num ' + cls(a.fwd_30) + '">' + fmt.pct(a.fwd_30, 1) + '</td><td class="num neg">' + fmt.pct(a.max_dd_30, 1) + '</td><td class="num pos">' + fmt.pct(a.max_up_30, 1) + '</td></tr>').join('') + '</tbody></table></div>';
+    $('#cyc-note').after(t);
+  }
 }
 function renderUniverse(d) {
   const U = d.universe_rank;
@@ -913,6 +1057,113 @@ function renderSweep(d) {
   const lb = W.leaderboard || [];
   $('#sw-lead-box').innerHTML = lb.length ? '<div class="tbl-wrap tall"><table><thead><tr><th>Family</th><th>Rule</th><th>Target</th><th>Universe</th><th class="num">Train score</th><th class="num">n</th><th>Status</th></tr></thead><tbody>' + lb.map((r) => '<tr><td>' + esc(r.family) + '</td><td class="wrap" style="min-width:200px;color:var(--text)">' + esc(r.rule || r.cell_id) + '</td><td>' + esc(r.target) + '</td><td>' + esc(r.universe) + '</td><td class="num">' + fmt.num(r.train_score, 2) + '</td><td class="num">' + (r.train_n ?? '–') + '</td><td><span class="status ' + (r.status === 'admitted' ? 'active' : r.status === 'rejected' ? 'dropped' : r.status === 'insufficient' ? 'watch' : '') + '">' + esc(r.status || 'unconfirmed') + '</span></td></tr>').join('') + '</tbody></table></div>' : '<div class="empty">No leaderboard yet.</div>';
   $('#sw-conf-box').innerHTML = conf.length ? '<div class="tbl-wrap tall"><table><thead><tr><th>Date</th><th>Cell</th><th class="num">Validation t</th><th class="num">Bar</th><th class="num">n</th><th>Verdict</th></tr></thead><tbody>' + conf.map((c) => '<tr><td>' + esc(c.date) + '</td><td class="wrap" style="min-width:220px;color:var(--text)">' + esc(c.cell_id) + '</td><td class="num">' + fmt.num(c.validation_t, 2) + '</td><td class="num">' + fmt.num(c.bar, 2) + '</td><td class="num">' + (c.n ?? '–') + '</td><td><span class="status ' + (c.verdict === 'admitted' ? 'active' : c.verdict === 'insufficient' ? 'watch' : 'dropped') + '">' + esc(c.verdict) + '</span></td></tr>').join('') + '</tbody></table></div>' : '<div class="empty">No confirmations yet.</div>';
+}
+
+/* ---------- pair calculator ---------- */
+function ptStats(a, b) { // arrays of log returns, same length
+  const n = a.length; if (n < 10) return null;
+  const ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+  let cov = 0, va = 0, vb = 0; for (let i = 0; i < n; i++) { cov += (a[i] - ma) * (b[i] - mb); va += (a[i] - ma) ** 2; vb += (b[i] - mb) ** 2; }
+  return { beta_ab: vb ? cov / vb : null, corr: (va && vb) ? cov / Math.sqrt(va * vb) : null, vol_a: Math.sqrt(va / (n - 1)) * Math.sqrt(365) * 100, vol_b: Math.sqrt(vb / (n - 1)) * Math.sqrt(365) * 100 };
+}
+function ptPrep(d) {
+  const P = d.pair_inputs;
+  if (P && P.names && P.dates) return { dates: P.dates, names: P.names, as_of: P.as_of, src: 'universe', funding_unit: P.funding_unit || 'pct_8h' };
+  // fallback: build from the daily series file (price_<SYM> plus btc and eth)
+  const S = d.series; if (!S) return null;
+  const names = {}; const n = S.date.length;
+  const add = (sym, arr) => { if (arr && arr.filter((x) => x != null).length > 200) names[sym] = { close: arr.slice(-250) }; };
+  add('BTC', S.btc); add('ETH', S.eth);
+  for (const k of Object.keys(S)) { const m = k.match(/^price_([A-Z0-9]{2,10})$/); if (m) add(m[1], S[k]); }
+  const fund = (sym) => { const f = S['funding_' + sym]; return f ? f.slice(-7).filter((x) => x != null).reduce((x, y, _, a) => x + y / a.length, 0) : null; };
+  for (const sym of Object.keys(names)) names[sym].funding_7d = fund(sym);
+  return { dates: S.date.slice(-250), names, as_of: d.panel_end, src: 'daily file', funding_unit: 'pct_8h' };
+}
+let ptChart = null, ptSeries = null;
+function renderPair(d) {
+  const D = ptPrep(d);
+  const syms = D ? Object.keys(D.names).sort() : [];
+  const sL = $('#pt-long'), sS = $('#pt-short');
+  if (!syms.length) { $('#pt-strip').innerHTML = '<div class="empty" style="grid-column:1/-1">No price series available for the calculator.</div>'; return; }
+  if (!sL.options.length) {
+    syms.forEach((x) => { sL.add(new Option(x, x)); sS.add(new Option(x, x)); });
+    sL.value = syms.includes('NEAR') ? 'NEAR' : syms.includes('SOL') ? 'SOL' : syms[0]; sS.value = syms.includes('ETH') ? 'ETH' : syms[1];
+    ['pt-long', 'pt-short', 'pt-win', 'pt-mode', 'pt-cap', 'pt-stop'].forEach((id) => $('#' + id).addEventListener('change', () => renderPair(d)));
+  }
+  $('#pair-lead').textContent = 'Size a long against a short with the market exposure hedged out. Betas and the spread statistics are computed in the browser from daily closes; carry from the latest 7-day funding. Arithmetic, not a signal. ' + syms.length + ' names from the ' + D.src + (D.as_of ? ', as of ' + D.as_of : '') + '.';
+  const L = sL.value, Sh = sS.value, win = +$('#pt-win').value, mode = $('#pt-mode').value, cap = +$('#pt-cap').value || 100000, stopZ = +$('#pt-stop').value || 3;
+  if (L === Sh) { $('#pt-strip').innerHTML = '<div class="empty" style="grid-column:1/-1">Pick two different names.</div>'; return; }
+  const cl = D.names[L].close.slice(-(win + 1)), cs = D.names[Sh].close.slice(-(win + 1)), cb = (D.names.BTC || {}).close ? D.names.BTC.close.slice(-(win + 1)) : null;
+  const dates = D.dates.slice(-(win + 1));
+  const ok = cl.map((v, i) => v != null && cs[i] != null && (!cb || cb[i] != null));
+  const lr = (arr) => { const out = []; for (let i = 1; i < arr.length; i++) out.push(ok[i] && ok[i - 1] ? Math.log(arr[i] / arr[i - 1]) : null); return out; };
+  const rl = lr(cl), rs = lr(cs), rb = cb ? lr(cb) : null;
+  const idx = rl.map((v, i) => v != null && rs[i] != null && (!rb || rb[i] != null) ? i : -1).filter((i) => i >= 0);
+  const a = idx.map((i) => rl[i]), b = idx.map((i) => rs[i]), m = rb ? idx.map((i) => rb[i]) : null;
+  const ls = ptStats(a, b), lb = m ? ptStats(a, m) : null, sb = m ? ptStats(b, m) : null;
+  if (!ls) { $('#pt-strip').innerHTML = '<div class="empty" style="grid-column:1/-1">Not enough overlapping history for this window.</div>'; return; }
+  const betaL = lb ? lb.beta_ab : null, betaS = sb ? sb.beta_ab : null;
+  // hedge ratio h = short notional per 1 of long notional
+  let h, label;
+  if (mode === 'beta' && betaL != null && betaS != null && betaS !== 0) { h = betaL / betaS; label = 'short notional per 1 long = beta_L / beta_S'; }
+  else if (mode === 'vol') { h = ls.vol_a / ls.vol_b; label = 'short notional per 1 long = vol_L / vol_S'; }
+  else if (mode === 'reg') { h = ls.beta_ab; label = 'short notional per 1 long = beta of long on short'; }
+  else { h = 1; label = 'equal notional'; }
+  h = Math.max(0.1, Math.min(5, h));
+  const residBeta = (betaL != null && betaS != null) ? betaL - h * betaS : null;
+  // spread = log(L) - h*log(S) using notional ratio h; z over window
+  const sp = []; for (let i = 0; i < cl.length; i++) sp.push(ok[i] ? Math.log(cl[i]) - h * Math.log(cs[i]) : null);
+  const spv = sp.filter((x) => x != null); const mean = spv.reduce((x, y) => x + y, 0) / spv.length; const sd = Math.sqrt(spv.reduce((x, y) => x + (y - mean) ** 2, 0) / (spv.length - 1));
+  const z = sp.map((x) => x == null ? null : (x - mean) / sd);
+  // half-life via AR(1) on spread
+  let hl = null; { const x = [], y = []; for (let i = 1; i < sp.length; i++) if (sp[i] != null && sp[i - 1] != null) { x.push(sp[i - 1] - mean); y.push(sp[i] - sp[i - 1]); } const st = ptStats(y, x); if (st && st.beta_ab != null && st.beta_ab < 0 && st.beta_ab > -1) hl = -Math.log(2) / Math.log(1 + st.beta_ab); }
+  const dsp = []; for (let i = 1; i < sp.length; i++) if (sp[i] != null && sp[i - 1] != null) dsp.push(sp[i] - sp[i - 1]);
+  const spreadVolDaily = Math.sqrt(dsp.reduce((x, y) => x + y * y, 0) / dsp.length) * 100; // % per day of spread
+  const zNow = z[z.length - 1];
+  // carry: long pays funding, short receives. funding_7d is per-8h rate as a fraction; annualize x3x365
+  const fL = D.names[L].funding_7d, fS = D.names[Sh].funding_7d;
+  const perYear = (D.funding_unit === 'fraction_8h') ? 3 * 365 * 100 : 3 * 365; // source reports percent per 8h unless told otherwise
+  const carry = (fL != null && fS != null) ? ((fS * h) - fL) * perYear / (1 + h) : null; // % of gross, annualized
+  // sizing: gross = cap; long = cap/(1+h), short = cap*h/(1+h)
+  const longN = cap / (1 + h), shortN = cap * h / (1 + h);
+  const pL = cl[cl.length - 1], pS = cs[cs.length - 1];
+  // 20-day z for a short-window read beside the window z
+  let z20 = null; { const last = spv.slice(-20); if (last.length >= 10) { const m20 = last.reduce((x, y) => x + y, 0) / last.length; const s20 = Math.sqrt(last.reduce((x, y) => x + (y - m20) ** 2, 0) / (last.length - 1)); if (s20 > 0) z20 = (spv[spv.length - 1] - m20) / s20; } }
+  const distToStop = stopZ * spreadVolDaily; // % move of the spread against the position, in daily-vol units
+  const riskAtStop = longN * distToStop / 100;
+  const tile = (k, v, n) => '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div>' + (n ? '<div class="n">' + n + '</div>' : '') + '</div>';
+  $('#pt-strip').innerHTML =
+    tile('Hedge ratio', fmt.num(h, 2) + 'x', esc(label)) +
+    tile('Beta to BTC', (betaL != null ? fmt.num(betaL, 2) : '–') + ' / ' + (betaS != null ? fmt.num(betaS, 2) : '–'), 'long / short, ' + win + 'd daily') +
+    tile('Residual beta of pair', residBeta != null ? '<span class="' + (Math.abs(residBeta) < 0.15 ? 'pos' : 'neg') + '">' + fmt.sgn(residBeta, 2) + '</span>' : '–', 'market exposure left after the hedge') +
+    tile('Correlation', fmt.num(ls.corr, 2), 'daily returns, ' + win + 'd') +
+    tile('Spread z now', (zNow != null ? '<span class="' + (Math.abs(zNow) > 2 ? 'neg' : '') + '">' + fmt.sgn(zNow, 2) + '</span>' : '–') + (z20 != null ? ' <span class="mute" style="font-size:13px">/ 20d ' + fmt.sgn(z20, 2) + '</span>' : ''), (hl ? 'window / 20-day; half-life ' + fmt.num(hl, 0) + ' days' : 'window / 20-day; no mean reversion in window')) +
+    tile('Net carry', carry != null ? '<span class="' + cls(carry) + '">' + fmt.pct(carry, 1) + '</span>' : '–', 'annualized, short funding received minus long paid');
+  $('#pt-legs').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Leg</th><th class="num">Notional</th><th class="num">Price</th><th class="num">Units</th><th class="num">Vol 30d ann.</th><th class="num">Funding 7d</th></tr></thead><tbody>' +
+    '<tr><td class="side-long">Long ' + esc(L) + '</td><td class="num">' + fmt.usd(longN) + '</td><td class="num">' + fmt.usd(pL) + '</td><td class="num">' + (longN / pL).toLocaleString('en-US', { maximumFractionDigits: pL < 100 ? 0 : 3 }) + '</td><td class="num">' + fmt.num(ls.vol_a, 0) + '%</td><td class="num">' + (fL != null ? fmt.num(D.funding_unit === 'fraction_8h' ? fL * 100 : fL, 4) + '% / 8h' : '–') + '</td></tr>' +
+    '<tr><td class="side-short">Short ' + esc(Sh) + '</td><td class="num">' + fmt.usd(shortN) + '</td><td class="num">' + fmt.usd(pS) + '</td><td class="num">' + (shortN / pS).toLocaleString('en-US', { maximumFractionDigits: pS < 100 ? 0 : 3 }) + '</td><td class="num">' + fmt.num(ls.vol_b, 0) + '%</td><td class="num">' + (fS != null ? fmt.num(D.funding_unit === 'fraction_8h' ? fS * 100 : fS, 4) + '% / 8h' : '–') + '</td></tr>' +
+    '<tr><td>Gross / net</td><td class="num">' + fmt.usd(Math.round(longN + shortN)) + ' / ' + fmt.sgn(Math.round(longN - shortN), 0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '</td><td colspan="4" class="mute">net beta to BTC ' + (residBeta != null ? fmt.sgn(residBeta * longN / cap, 2) + ' of capital' : '–') + '</td></tr></tbody></table></div>';
+  $('#pt-diag').innerHTML = '<div class="tbl-wrap"><table><tbody>' +
+    '<tr><td>Spread vol, daily</td><td class="num">' + fmt.num(spreadVolDaily, 2) + '%</td></tr>' +
+    '<tr><td>One z in spread terms</td><td class="num">' + fmt.num(sd * 100, 2) + '%</td></tr>' +
+    '<tr><td>Stop at ' + esc(stopZ) + ' daily spread vols</td><td class="num">' + fmt.num(distToStop, 2) + '% against, about ' + fmt.usd(riskAtStop) + ' (' + fmt.num(riskAtStop / cap * 100, 1) + '% of capital)</td></tr>' +
+    '<tr><td>Expected move to the mean from here</td><td class="num">' + (zNow != null ? fmt.pct(-zNow * sd * 100, 2) : '–') + (hl ? ' over about ' + fmt.num(hl, 0) + ' days' : '') + '</td></tr>' +
+    '<tr><td>Spread range in window</td><td class="num">' + fmt.pct((Math.min(...spv) - mean) * 100, 1) + ' to ' + fmt.pct((Math.max(...spv) - mean) * 100, 1) + '</td></tr>' +
+    '</tbody></table></div><p class="hint" style="margin-top:8px">If z is negative the long leg is cheap against the short on this window and a mean-reversion entry is long-the-spread; if positive, the reverse. Half-life above 30 days or no mean reversion means the spread is a relative-strength bet, not a reversion one.</p>';
+  if (window.LightweightCharts) {
+    if (!ptChart) { ptChart = LC.createChart(document.getElementById('c-pt'), baseOpts()); }
+    if (ptSeries) ptChart.removeSeries(ptSeries);
+    ptSeries = ptChart.addLineSeries({ color: css('--text'), lineWidth: 1.5, priceFormat: { type: 'price', precision: 2, minMove: 0.01 } });
+    ptSeries.setData(dates.map((t, i) => z[i] == null ? { time: t } : { time: t, value: z[i] }));
+    [[2, '--warn'], [-2, '--warn'], [0, '--line']].forEach(([lvl, c]) => ptSeries.createPriceLine({ price: lvl, color: css(c), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: lvl !== 0 }));
+    ptChart.timeScale().fitContent();
+    $('#ro-pt').innerHTML = '<span><b>' + esc(L) + ' / ' + esc(Sh) + '</b></span><span>z <b>' + fmt.sgn(zNow, 2) + '</b></span><span>h <b>' + fmt.num(h, 2) + '</b></span>';
+  }
+  const PB = d.pairs_board;
+  if (PB && PB.rows && PB.rows.length) {
+    $('#pb-box').innerHTML = '<div class="tbl-wrap tall"><table><thead><tr><th>Long</th><th>Short</th><th>Type</th><th>Sector</th><th class="num">z now</th><th class="num">Half-life</th><th class="num">Coint. p</th><th class="num">Corr</th><th class="num">Hedge</th><th class="num">Carry</th><th class="num">Backtest Sharpe</th></tr></thead><tbody>' + PB.rows.map((r) => '<tr><td class="side-long">' + esc(r.long) + '</td><td class="side-short">' + esc(r.short) + '</td><td>' + esc(r.type) + '</td><td>' + esc(r.sector || '') + '</td><td class="num ' + (Math.abs(r.z) > 2 ? 'neg' : '') + '">' + fmt.sgn(r.z, 2) + '</td><td class="num">' + (r.half_life != null ? fmt.num(r.half_life, 0) + 'd' : '–') + '</td><td class="num">' + (r.coint_p != null ? fmt.num(r.coint_p, 3) : '–') + '</td><td class="num">' + fmt.num(r.corr, 2) + '</td><td class="num">' + fmt.num(r.hedge, 2) + '</td><td class="num ' + cls(r.carry) + '">' + fmt.pct(r.carry, 1) + '</td><td class="num">' + (r.bt_sharpe != null ? fmt.num(r.bt_sharpe, 2) : '<span class="mute">pending</span>') + '</td></tr>').join('') + '</tbody></table></div>';
+    if (PB.as_of) $('#pb-lead').textContent = 'Screened daily across the universe, as of ' + PB.as_of + '. ' + (PB.note || '');
+  } else $('#pb-box').innerHTML = '<div class="empty">No pairs board yet.</div>';
 }
 
 function renderRelative(d) {
@@ -1100,7 +1351,7 @@ async function pollLive(d) {
 loadData().then((d) => {
   renderHeader(d); renderHero(d);
   if (window.LightweightCharts) renderCharts(d); else document.querySelectorAll('.pane').forEach((p) => p.innerHTML = '<div class="empty">Chart library did not load.</div>');
-  renderInternals(d); renderCycle(d); renderRelative(d); renderUniverse(d); renderBook(d); renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderSweep(d); renderQueue(d); renderJobs(d);
+  renderRisk(d); renderInternals(d); renderCycle(d); renderDerivs(d); renderHeatStats(d); renderRelative(d); renderExtremes(d); renderCandidates(d); renderUniverse(d); renderBook(d); renderPair(d); renderIdeas(d); renderWatchlist(d); renderFactors(d); renderAlts(d); renderLibrary(d); renderRankStats(d); renderSetups(d); renderLedger(d); renderHealth(d); renderResearch(d); renderSweep(d); renderQueue(d); renderJobs(d);
   if (!d.sample) { pollLive(d); setInterval(() => pollLive(d), LIVE_POLL_MS); setInterval(() => { if (lastLiveAt && d.live) paintLive(true, d.live.as_of, ''); }, 15000); }
   else paintLive(false, null, 'sample');
 });
