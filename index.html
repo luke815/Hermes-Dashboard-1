@@ -399,6 +399,9 @@
       <div><h3 class="sub-h">Spread diagnostics</h3><div id="pt-diag"></div></div>
     </div>
     <div class="pane short" style="margin-top:12px"><div class="readout" id="ro-pt"></div><div class="title">Spread z-score over the window, with the 2-sigma bands</div><div class="chart" id="c-pt"></div></div>
+    <h3 class="sub-h" style="margin-top:14px">Scan all pairs on this window <button id="pt-scan" class="seg" style="padding:4px 10px;background:var(--raised);border:1px solid var(--line);border-radius:var(--radius);color:var(--text);cursor:pointer;margin-left:8px">Scan</button></h3>
+    <p class="hint" style="margin:0 0 8px" id="ps-lead">Every pair among the available names, beta-neutral to BTC. Reversion candidates need correlation above 0.4, a half-life between 3 and 30 days and the window z beyond 1.5; relative-strength spreads are the widest 30-day return gaps with both legs trending the same way against their 50-day. A screen in the browser, without the cointegration test or a backtest; the daily board below adds both.</p>
+    <div id="ps-box"></div>
     <h3 class="sub-h" style="margin-top:14px">Pairs board</h3>
     <p class="hint" style="margin:0 0 8px" id="pb-lead">Screened daily across the universe: mean-reversion candidates (cointegrated, short half-life, stretched z) and relative-strength spreads. Written by the agent; empty until the pairs job exists.</p>
     <div id="pb-box"></div>
@@ -1059,6 +1062,54 @@ function renderSweep(d) {
   $('#sw-conf-box').innerHTML = conf.length ? '<div class="tbl-wrap tall"><table><thead><tr><th>Date</th><th>Cell</th><th class="num">Validation t</th><th class="num">Bar</th><th class="num">n</th><th>Verdict</th></tr></thead><tbody>' + conf.map((c) => '<tr><td>' + esc(c.date) + '</td><td class="wrap" style="min-width:220px;color:var(--text)">' + esc(c.cell_id) + '</td><td class="num">' + fmt.num(c.validation_t, 2) + '</td><td class="num">' + fmt.num(c.bar, 2) + '</td><td class="num">' + (c.n ?? '–') + '</td><td><span class="status ' + (c.verdict === 'admitted' ? 'active' : c.verdict === 'insufficient' ? 'watch' : 'dropped') + '">' + esc(c.verdict) + '</span></td></tr>').join('') + '</tbody></table></div>' : '<div class="empty">No confirmations yet.</div>';
 }
 
+/* ---------- pair scan ---------- */
+function ptScan(D, win) {
+  const box = $('#ps-box'); box.innerHTML = '<div class="empty">Scanning…</div>';
+  setTimeout(() => {
+    const syms = Object.keys(D.names).filter((s2) => s2 !== 'BTC');
+    const n = win + 1;
+    const cb = D.names.BTC ? D.names.BTC.close.slice(-n) : null;
+    const prep = {};
+    for (const s2 of syms) {
+      const c = D.names[s2].close.slice(-n); if (!c || c.length < n) continue;
+      const lp = c.map((v) => v == null ? null : Math.log(v));
+      const r = []; for (let i = 1; i < lp.length; i++) r.push(lp[i] == null || lp[i - 1] == null ? null : lp[i] - lp[i - 1]);
+      const closes = D.names[s2].close; const c50 = closes.slice(-50).filter((v) => v != null); const ma50 = c50.length ? c50.reduce((x, y) => x + y, 0) / c50.length : null;
+      const r30 = closes.length > 31 && closes[closes.length - 1] != null && closes[closes.length - 31] != null ? closes[closes.length - 1] / closes[closes.length - 31] - 1 : null;
+      prep[s2] = { lp, r, above50: ma50 != null ? closes[closes.length - 1] > ma50 : null, r30, f: D.names[s2].funding_7d };
+    }
+    const rb = cb ? cb.map((v, i) => i === 0 || v == null || cb[i - 1] == null ? null : Math.log(v) - Math.log(cb[i - 1])).slice(1) : null;
+    const betaTo = (ra) => { if (!rb) return null; const a = [], b = []; for (let i = 0; i < ra.length; i++) if (ra[i] != null && rb[i] != null) { a.push(ra[i]); b.push(rb[i]); } const st = ptStats(a, b); return st ? st.beta_ab : null; };
+    const betas = {}; for (const s2 in prep) betas[s2] = betaTo(prep[s2].r);
+    const perYear = (D.funding_unit === 'fraction_8h') ? 3 * 365 * 100 : 3 * 365;
+    const rev = [], rs = [];
+    const names = Object.keys(prep);
+    for (let i = 0; i < names.length; i++) for (let j = 0; j < names.length; j++) {
+      if (i === j) continue;
+      const A = prep[names[i]], Bq = prep[names[j]];
+      const a = [], b = []; for (let k = 0; k < A.r.length; k++) if (A.r[k] != null && Bq.r[k] != null) { a.push(A.r[k]); b.push(Bq.r[k]); }
+      const st = ptStats(a, b); if (!st) continue;
+      const bL = betas[names[i]], bS = betas[names[j]];
+      const h = (bL != null && bS != null && bS > 0.05) ? Math.max(0.1, Math.min(5, bL / bS)) : 1;
+      const sp = []; for (let k = 0; k < A.lp.length; k++) sp.push(A.lp[k] == null || Bq.lp[k] == null ? null : A.lp[k] - h * Bq.lp[k]);
+      const spv = sp.filter((x) => x != null); if (spv.length < 20) continue;
+      const mean = spv.reduce((x, y) => x + y, 0) / spv.length, sd = Math.sqrt(spv.reduce((x, y) => x + (y - mean) ** 2, 0) / (spv.length - 1)); if (!sd) continue;
+      const z = (spv[spv.length - 1] - mean) / sd;
+      const x = [], y = []; for (let k = 1; k < sp.length; k++) if (sp[k] != null && sp[k - 1] != null) { x.push(sp[k - 1] - mean); y.push(sp[k] - sp[k - 1]); }
+      const ar = ptStats(y, x); const hl = (ar && ar.beta_ab != null && ar.beta_ab < 0 && ar.beta_ab > -1) ? -Math.log(2) / Math.log(1 + ar.beta_ab) : null;
+      const carry = (A.f != null && Bq.f != null) ? ((Bq.f * h) - A.f) * perYear / (1 + h) : null;
+      // reversion: long names[i], short names[j] when z < -1.5 (long leg cheap)
+      if (st.corr > 0.4 && hl != null && hl >= 3 && hl <= 30 && z < -1.5) rev.push({ long: names[i], short: names[j], z, hl, corr: st.corr, h, carry, score: Math.abs(z) * (1 / Math.sqrt(hl)) });
+      // relative strength: long leader, short laggard, both trending the same way vs 50d
+      if (A.r30 != null && Bq.r30 != null && A.above50 != null && A.above50 === Bq.above50) { const gap = A.r30 - Bq.r30; if (gap > 0) rs.push({ long: names[i], short: names[j], gap, corr: st.corr, h, carry, z, hl }); }
+    }
+    rev.sort((p, q) => q.score - p.score); rs.sort((p, q) => q.gap - p.gap);
+    const row = (r, kind) => '<tr><td class="side-long">' + esc(r.long) + '</td><td class="side-short">' + esc(r.short) + '</td>' + (kind === 'rev' ? '<td class="num neg">' + fmt.sgn(r.z, 2) + '</td><td class="num">' + fmt.num(r.hl, 0) + 'd</td>' : '<td class="num pos">' + fmt.pct(r.gap * 100, 1) + '</td><td class="num">' + fmt.sgn(r.z, 2) + '</td>') + '<td class="num">' + fmt.num(r.corr, 2) + '</td><td class="num">' + fmt.num(r.h, 2) + '</td><td class="num ' + cls(r.carry) + '">' + (r.carry != null ? fmt.pct(r.carry, 1) : '–') + '</td></tr>';
+    const tbl = (rows, kind, head) => '<div class="tbl-wrap tall"><table><thead><tr><th>Long</th><th>Short</th>' + head + '<th class="num">Corr</th><th class="num">Hedge</th><th class="num">Carry</th></tr></thead><tbody>' + (rows.length ? rows.slice(0, 15).map((r) => row(r, kind)).join('') : '<tr><td colspan="7" class="mute">none on this window</td></tr>') + '</tbody></table></div>';
+    box.innerHTML = '<div class="two"><div><h4 class="sub-h">Reversion candidates: long leg cheap on the window</h4>' + tbl(rev, 'rev', '<th class="num">z</th><th class="num">Half-life</th>') + '</div><div><h4 class="sub-h">Relative-strength spreads: 30-day leader over laggard</h4>' + tbl(rs, 'rs', '<th class="num">30d gap</th><th class="num">z</th>') + '</div></div><p class="hint" style="margin-top:6px">' + names.length + ' names, ' + (names.length * (names.length - 1)) + ' ordered pairs, ' + win + '-day window. Click a pair into the calculator above to size it.</p>';
+    box.querySelectorAll('tbody tr').forEach((tr) => tr.addEventListener('click', () => { const tds = tr.querySelectorAll('td'); if (tds.length < 3) return; $('#pt-long').value = tds[0].textContent; $('#pt-short').value = tds[1].textContent; $('#pt-long').dispatchEvent(new Event('change')); window.scrollTo({ top: $('#pt-strip').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' }); }));
+  }, 20);
+}
 /* ---------- pair calculator ---------- */
 function ptStats(a, b) { // arrays of log returns, same length
   const n = a.length; if (n < 10) return null;
@@ -1159,6 +1210,8 @@ function renderPair(d) {
     ptChart.timeScale().fitContent();
     $('#ro-pt').innerHTML = '<span><b>' + esc(L) + ' / ' + esc(Sh) + '</b></span><span>z <b>' + fmt.sgn(zNow, 2) + '</b></span><span>h <b>' + fmt.num(h, 2) + '</b></span>';
   }
+  const scanBtn = $('#pt-scan');
+  if (scanBtn && !scanBtn.dataset.bound) { scanBtn.dataset.bound = '1'; scanBtn.addEventListener('click', () => ptScan(D, +$('#pt-win').value)); }
   const PB = d.pairs_board;
   if (PB && PB.rows && PB.rows.length) {
     $('#pb-box').innerHTML = '<div class="tbl-wrap tall"><table><thead><tr><th>Long</th><th>Short</th><th>Type</th><th>Sector</th><th class="num">z now</th><th class="num">Half-life</th><th class="num">Coint. p</th><th class="num">Corr</th><th class="num">Hedge</th><th class="num">Carry</th><th class="num">Backtest Sharpe</th></tr></thead><tbody>' + PB.rows.map((r) => '<tr><td class="side-long">' + esc(r.long) + '</td><td class="side-short">' + esc(r.short) + '</td><td>' + esc(r.type) + '</td><td>' + esc(r.sector || '') + '</td><td class="num ' + (Math.abs(r.z) > 2 ? 'neg' : '') + '">' + fmt.sgn(r.z, 2) + '</td><td class="num">' + (r.half_life != null ? fmt.num(r.half_life, 0) + 'd' : '–') + '</td><td class="num">' + (r.coint_p != null ? fmt.num(r.coint_p, 3) : '–') + '</td><td class="num">' + fmt.num(r.corr, 2) + '</td><td class="num">' + fmt.num(r.hedge, 2) + '</td><td class="num ' + cls(r.carry) + '">' + fmt.pct(r.carry, 1) + '</td><td class="num">' + (r.bt_sharpe != null ? fmt.num(r.bt_sharpe, 2) : '<span class="mute">pending</span>') + '</td></tr>').join('') + '</tbody></table></div>';
