@@ -560,7 +560,24 @@ const DERIV_DEF = {
 const DERIV_NOTE = { 'Implied minus realized': 'positive: options price more movement than is happening', '25d risk reversal': 'calls minus puts; negative means puts bid', 'Skew': 'Laevitas skew, mean across tenors', 'DVOL': 'Deribit 30-day implied vol index', 'Basis, annualized': 'futures over spot, mean across tenors' };
 function vrpSeries(a) { const iv = SER.S['dvol_' + a], rv = SER.S['rv_' + a]; if (!iv || !rv) return null; return iv.map((x, i) => isNum(x) && isNum(rv[i]) ? x - rv[i] : null); }
 /* Friendly labels for the derivatives library's raw measure ids, when the key comes from build_derivatives_key.py. */
-const DERIV_LABEL = { dvol_level: 'DVOL', dvol_chg_7: 'DVOL, 7d change', dvol_pct_252: 'DVOL percentile', dvol_minus_rv30: 'Implied minus realized', atm_iv_7: 'ATM implied vol, 7d', atm_iv_30: 'ATM implied vol, 30d', atm_iv_90: 'ATM implied vol, 90d', atm_term_slope: 'ATM term slope', skew_25d: 'Skew', rr_25d: '25d risk reversal', basis_level: 'Basis, annualized', basis_chg_7: 'Basis, 7d change', funding_level: 'Funding', funding_oiw: 'Funding, OI-weighted' };
+const DERIV_LABEL = { dvol_level: 'DVOL', dvol_chg_7: 'DVOL, 7d change', dvol_pct_252: 'DVOL percentile', dvol_minus_rv30: 'Implied minus 30d realized', atm_iv_7: 'ATM implied vol, 7d', atm_iv_30: 'ATM implied vol, 30d', atm_iv_90: 'ATM implied vol, 90d', atm_term_slope: 'ATM term slope', atm_inversion: 'ATM term inversion', skew_25d_7: '25d skew, 7d tenor', skew_25d_30: '25d skew, 30d tenor', skew_25d_90: '25d skew, 90d tenor', skew_chg_5: '25d skew, 5d change', skew_term_slope: 'Skew term slope', risk_reversal_30: '25d risk reversal, 30d tenor', basis_venue: 'Basis, annualized', basis_pct_252: 'Basis percentile', perp_premium: 'Funding, OI-weighted, annualized', funding_oiw: 'Funding, OI-weighted', funding_oiw_avg_7: 'Funding, OI-weighted, 7d avg', funding_persist_high_oiw: 'Days of high funding', funding_persist_low_oiw: 'Days of low funding', funding_dispersion_oiw: 'Funding dispersion across venues', rv_7: 'Realized vol, 7d', rv_30: 'Realized vol, 30d', rv_ratio_7_30: 'Realized vol, 7d over 30d', vol_of_vol_30: 'Vol of vol, 30d', skew_25d: 'Skew', rr_25d: '25d risk reversal', basis_level: 'Basis, annualized', basis_chg_7: 'Basis, 7d change', funding_level: 'Funding' };
+/* Overview strip: the derivatives key's measure when it has it, so both tabs show the same number; otherwise the series. */
+const GLANCE = [['DVOL', 'dvol_level', 'DVOL', 'vol pts'], ['Implied minus 30d realized', 'dvol_minus_rv30', 'Implied minus realized', 'vol pts'], ['25d skew, 30d tenor', 'skew_25d_30', 'Skew', 'vol pts'], ['25d risk reversal, 30d tenor', 'risk_reversal_30', '25d risk reversal', 'vol pts'], ['Basis, annualized', 'basis_venue', 'Basis, annualized', '%'], ['Funding, OI-weighted', 'funding_oiw', 'Funding, OI-weighted', '% / 8h']];
+function glanceRows(d) {
+  const key = d.derivatives && d.derivatives.assets ? d.derivatives : null;
+  const own = derivativesFromSeries(d);
+  const out = {}; let asOf = own.as_of;
+  for (const a of ['BTC', 'ETH']) {
+    const fromKey = new Map(((key && key.assets[a]) || []).map((r) => [r.name, r]));
+    const fromSer = new Map(((own.assets[a]) || []).map((r) => [r.name, r]));
+    out[a] = GLANCE.map(([label, id, serName, unit]) => {
+      const k = fromKey.get(id);
+      if (k && isNum(k.value)) { if (key.as_of) asOf = key.as_of; return { ...k, label, unit, decimals: Math.max(1, Math.min(k.decimals ?? 2, unit === '% / 8h' ? 4 : 2)) }; }
+      const s = fromSer.get(serName); return s ? { ...s, label: s.name } : null; // series rows keep their own, less specific, name
+    }).filter(Boolean);
+  }
+  return { as_of: asOf, assets: out };
+}
 const derivLabel = (n) => DERIV_LABEL[n] || String(n).replace(/_/g, ' ');
 function derivatives(d) {
   if (d.derivatives && d.derivatives.assets) return d.derivatives;
@@ -758,13 +775,12 @@ function renderSignal(d) {
 }
 
 function renderDerivGlance(d) {
-  const D = derivativesFromSeries(d);
-  const pick = ['DVOL', 'Implied minus realized', '25d risk reversal', 'Skew', 'Basis, annualized', 'Funding, Binance'];
+  const D = glanceRows(d);
   const html = Object.keys(D.assets).map((a) => {
-    const rows = (D.assets[a] || []).filter((r) => pick.includes(r.name));
+    const rows = D.assets[a] || [];
     if (!rows.length) return '';
     return '<div>' + table([[a, ''], ['Now', 'num'], ['7d', 'num'], ['Trailing-year rank', 'num']], rows.map((r) => [
-      esc(r.name) + (r.unit === '% / 8h' ? ' <span class="mute">' + fmt.num(fundingAnn(r.value), 1) + '% ann.</span>' : ''),
+      esc(r.label || r.name) + (r.unit === '% / 8h' ? ' <span class="mute">' + fmt.num(fundingAnn(r.value), 1) + '% ann.</span>' : ''),
       fmtUnit(r, r.value), '<span class="' + cls(r.chg_7d) + '">' + fmtUnit(r, r.chg_7d, true) + '</span>', pctBar(r.pct_1y)])) + '</div>';
   }).join('');
   if (!html) { markEmpty('sec-deriv-glance', 'overview', 'derivatives'); return; }
