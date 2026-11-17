@@ -559,8 +559,15 @@ const DERIV_DEF = {
 };
 const DERIV_NOTE = { 'Implied minus realized': 'positive: options price more movement than is happening', '25d risk reversal': 'calls minus puts; negative means puts bid', 'Skew': 'Laevitas skew, mean across tenors', 'DVOL': 'Deribit 30-day implied vol index', 'Basis, annualized': 'futures over spot, mean across tenors' };
 function vrpSeries(a) { const iv = SER.S['dvol_' + a], rv = SER.S['rv_' + a]; if (!iv || !rv) return null; return iv.map((x, i) => isNum(x) && isNum(rv[i]) ? x - rv[i] : null); }
+/* Friendly labels for the derivatives library's raw measure ids, when the key comes from build_derivatives_key.py. */
+const DERIV_LABEL = { dvol_level: 'DVOL', dvol_chg_7: 'DVOL, 7d change', dvol_pct_252: 'DVOL percentile', dvol_minus_rv30: 'Implied minus realized', atm_iv_7: 'ATM implied vol, 7d', atm_iv_30: 'ATM implied vol, 30d', atm_iv_90: 'ATM implied vol, 90d', atm_term_slope: 'ATM term slope', skew_25d: 'Skew', rr_25d: '25d risk reversal', basis_level: 'Basis, annualized', basis_chg_7: 'Basis, 7d change', funding_level: 'Funding', funding_oiw: 'Funding, OI-weighted' };
+const derivLabel = (n) => DERIV_LABEL[n] || String(n).replace(/_/g, ' ');
 function derivatives(d) {
   if (d.derivatives && d.derivatives.assets) return d.derivatives;
+  return derivativesFromSeries(d);
+}
+/* Always computed from the daily series, so the Overview strip does not depend on which job wrote the derivatives key. */
+function derivativesFromSeries(d) {
   const assets = {};
   for (const a of Object.keys(DERIV_DEF)) {
     assets[a] = DERIV_DEF[a].map(([name, key, unit, dec]) => {
@@ -751,7 +758,7 @@ function renderSignal(d) {
 }
 
 function renderDerivGlance(d) {
-  const D = derivatives(d);
+  const D = derivativesFromSeries(d);
   const pick = ['DVOL', 'Implied minus realized', '25d risk reversal', 'Skew', 'Basis, annualized', 'Funding, Binance'];
   const html = Object.keys(D.assets).map((a) => {
     const rows = (D.assets[a] || []).filter((r) => pick.includes(r.name));
@@ -1095,7 +1102,7 @@ function renderDerivs(d) {
   const assets = Object.keys(D.assets || {}).filter((a) => D.assets[a].length);
   if (!assets.length) { markEmpty('sec-deriv', 'derivatives', 'derivatives readings'); return; }
   $('#deriv-box').innerHTML = assets.map((a) => '<div style="margin-bottom:14px">' + table([[a, ''], ['Now', 'num'], ['1d', 'num'], ['7d', 'num'], ['Trailing-year rank', 'num'], ['30 days', ''], ['Reads as', 'wrap']], D.assets[a].map((r) => [
-    esc(r.name) + '<div class="mute" style="font-size:12px">' + esc(r.unit) + (r.unit === '% / 8h' && isNum(r.value) ? ', ' + fmt.num(fundingAnn(r.value), 1) + '% ann.' : '') + (r.as_of && r.as_of !== D.as_of ? ', last ' + esc(r.as_of) : '') + '</div>',
+    esc(r.label || derivLabel(r.name)) + '<div class="mute" style="font-size:12px">' + esc(r.unit) + (r.unit === '% / 8h' && isNum(r.value) ? ', ' + fmt.num(fundingAnn(r.value), 1) + '% ann.' : '') + (r.as_of && r.as_of !== D.as_of ? ', last ' + esc(r.as_of) : '') + '</div>',
     fmtUnit(r, r.value), '<span class="' + cls(r.chg_1d) + '">' + fmtUnit(r, r.chg_1d, true) + '</span>', '<span class="' + cls(r.chg_7d) + '">' + fmtUnit(r, r.chg_7d, true) + '</span>', pctBar(r.pct_1y), spark(r.spark, css('--text-2')), esc(r.note || DERIV_NOTE[r.name] || '')])) + '</div>').join('') + '<p class="hint">' + esc(D.note || 'Readings, not signals.') + (D.computed_in_page ? ' Computed in the browser from the daily series.' : '') + '</p>';
   stamp('age-deriv', D.as_of, 'close');
 }
