@@ -330,7 +330,7 @@
   <div class="tab" id="tab-state">
     <section id="sec-state">
       <header><h2>Where each reading sits</h2><span class="age" id="age-state"></span></header>
-      <p class="lead"><b>What followed, not what will follow.</b> Each tile: where the reading sits in its own past year (bottom fifth = the coldest 20% of days, top fifth = the hottest). Under it: what the coin did in the 30 days after past days in the same fifth, since the reading exists (each tile says its own start). Click a tile for the full path. Three pre-registered research passes found no reading that times BTC or ETH; this tab is for context.</p>
+      <p class="lead"><b>What followed, not what will follow.</b> Each tile: where the reading sits in its own past year (bottom fifth = the coldest 20% of days, top fifth = the hottest). Under it: what the coin did in the 30 days after past days in the same fifth, since the reading exists (each tile says its own start). The last five tiles are flows and macro (stablecoin supply, equities, VIX, dollar, real yields). Click a tile for the full path. Three pre-registered research passes found no reading that times BTC or ETH; this tab is for context.</p>
       <div class="controls"><div class="seg" id="state-asset"><button data-a="btc" aria-pressed="true">BTC</button><button data-a="eth">ETH</button></div></div>
       <div id="glance-box"></div>
       <div id="state-detail" style="margin-top:12px"></div>
@@ -1425,7 +1425,21 @@ const STATE_DEF = [
   ['alt_oi', 'Alt OI vs BTC OI', 'Alt OI / BTC', () => altOiRatio(), (v) => fmt.num(v, 2) + 'x', 'ETH plus 18 alts over BTC open interest; above 1x the alts exceed BTC'],
   ['bigalt_funding', 'Large-alt funding', 'Alt funding', () => bigAltFunding(), (v) => fmt.num(v * 100, 2) + ' bps / 8h', 'median of BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT; the exchange default is 1 bp'],
   ['alt_froth', 'Alt froth', 'Alt froth', () => null, () => '', 'alt OI above BTC OI AND large-alt funding above the 1 bp default', 'composite'],
+  ['stable_chg30', 'Stablecoin supply, 30d change', 'Stablecoins 30d', () => pctChg(SER.S.macro_stable_supply, 30), (v) => fmt.pct(v, 1), 'USDT + USDC circulating (DefiLlama)'],
+  ['spx_ret20', 'S&P 500, 20d return', 'S&P 20d', () => pctChg(SER.S.macro_spx, 20), (v) => fmt.pct(v, 1), 'risk appetite outside crypto (FRED)'],
+  ['vix', 'VIX', 'VIX', () => SER.S.macro_vix, (v) => fmt.num(v, 1), 'equity implied vol (FRED)'],
+  ['dxy_chg20', 'Dollar index, 20d change', 'Dollar 20d', () => pctChg(SER.S.macro_dxy, 20), (v) => fmt.pct(v, 2), 'FRED broad dollar index, published with a short lag'],
+  ['real10_chg20', '10y real yield, 20d change', 'Real yield 20d', () => diffN(SER.S.macro_real10, 20), (v) => fmt.sgn(v, 2) + ' pts', 'FRED 10-year TIPS yield'],
 ];
+const pctChg = (a, n) => !a ? null : a.map((v, i) => i >= n && isNum(v) && isNum(a[i - n]) && a[i - n] ? (v / a[i - n] - 1) * 100 : null);
+const diffN = (a, n) => !a ? null : a.map((v, i) => i >= n && isNum(v) && isNum(a[i - n]) ? v - a[i - n] : null);
+/* Macro level series come from data.json (series.macro_*, written by scripts/macro_pull.py) or, until that runs, from macro.json. */
+let MACRO_P = null;
+function loadMacro() {
+  if (SER.S.macro_spx) return Promise.resolve();
+  if (!MACRO_P) MACRO_P = fetch('macro.json?v=' + Math.floor(Date.now() / 3600000)).then((r) => r.ok ? r.json() : null).then((j) => { if (j && j.series && j.series.macro_spx && j.series.macro_spx.length === SER.n) Object.assign(SER.S, j.series); }).catch(() => {});
+  return MACRO_P;
+}
 const ALTS18 = ['BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'LINK', 'APT', 'BCH', 'LTC', 'NEAR', 'SUI', 'ARB', 'ATOM', 'FIL', 'OP', 'UNI'];
 const BIG_ALTS = ['BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'LINK', 'AVAX', 'DOT'];
 function altOiRatio() {
@@ -1799,7 +1813,7 @@ function renderStateTab(d) {
   const rg = $('#regime-range'); if (rg && !rg.dataset.bound) { rg.dataset.bound = '1'; segBind(rg, 'd', (v) => { REGIME_DAYS = +v; safe(drawRegime); }); }
   const rc = $('#regime-canvas'); if (rc && !rc.dataset.bound) { rc.dataset.bound = '1'; rc.addEventListener('mousemove', regimeHover); rc.addEventListener('mouseleave', () => { const t = $('#regime-tip'); if (t) t.style.display = 'none'; }); const touch = (e) => { if (e.touches && e.touches[0]) regimeHover({ currentTarget: rc, clientX: e.touches[0].clientX, clientY: e.touches[0].clientY }); }; rc.addEventListener('touchstart', touch, { passive: true }); rc.addEventListener('touchmove', touch, { passive: true }); }
   if (!window._stateResize) { window._stateResize = true; let tmr; window.addEventListener('resize', () => { clearTimeout(tmr); tmr = setTimeout(drawStateVisuals, 150); }); }
-  loadBaseRates().then(() => {
+  Promise.all([loadBaseRates(), loadMacro()]).then(() => {
     if (BR_ERR) { boxes.forEach((b) => { if (b) b.innerHTML = '<div class="empty">base_rates.json did not load (' + esc(BR_ERR) + '). The readings themselves are on the Overview and Derivatives tabs.</div>'; }); safe(drawRegime); safe(drawTD, d); return; }
     drawStateAll(d);
   });
