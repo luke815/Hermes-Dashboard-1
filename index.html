@@ -99,7 +99,7 @@
   .fifths { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; height: 9px; margin: 2px 0; }
   .fifths i { display: block; border-radius: 2px; background: var(--line); }
   .fifths i.bottom { background: var(--cold); opacity: 0.35; } .fifths i.top { background: var(--hot); opacity: 0.35; }
-  .fifths i.low { background: color-mix(in srgb, var(--cold) 45%, var(--surface)); opacity: 0.5; } .fifths i.high { background: color-mix(in srgb, var(--hot) 45%, var(--surface)); opacity: 0.5; }
+  .fifths i.low { background: var(--cold); background: color-mix(in srgb, var(--cold) 45%, var(--surface)); opacity: 0.5; } .fifths i.high { background: var(--hot); background: color-mix(in srgb, var(--hot) 45%, var(--surface)); opacity: 0.5; }
   .fifths i.mid { background: var(--text-3); opacity: 0.3; }
   .fifths i.on { opacity: 1; outline: 2px solid var(--text); outline-offset: 1px; }
   .t-state, .t-next { font-size: 12px; color: var(--text-2); } .t-state b { color: var(--text); font-weight: 600; }
@@ -109,13 +109,13 @@
   .regime-tip { position: absolute; pointer-events: none; background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 11px; line-height: 1.5; color: var(--text-2); display: none; white-space: nowrap; z-index: 2; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
   .regime-tip b { color: var(--text); }
   .legend-q { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--text-3); margin-top: 8px; }
-  .legend-q i { display: inline-block; width: 12px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .legend-q i { display: inline-block; width: 12px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; border: 1px solid var(--line); }
   .small { font-size: 11px; }
   .sdet { padding: 6px 0 0; font-size: 12px; }
   .sdet summary { cursor: pointer; color: var(--text-3); font-size: 12px; padding: 4px 0 6px; }
   .agree { font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--text-2); white-space: nowrap; }
-  .agree.consistent { border-color: var(--up); color: var(--up); }
-  .agree.consistent-2of3 { border-color: var(--warn); color: var(--warn); }
+  .agree.consistent { border-color: var(--text-2); color: var(--text); }
+  .agree.consistent-2of3 { border-color: var(--text-3); color: var(--text-2); }
   .agree.insufficient { border-style: dashed; color: var(--text-3); }
   .tdgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
   .tdcell { border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px; }
@@ -330,9 +330,9 @@
   <div class="tab" id="tab-state">
     <section id="sec-state">
       <header><h2>Where each reading sits</h2><span class="age" id="age-state"></span></header>
-      <p class="lead">Each reading placed in its own trailing year and split into fifths, cold at the bottom, hot at the top. Under it: what the coin did over the next 30 days on past days in the same fifth, since 2019. Click a tile for the full path and the per-period record. This is the record, not a forecast: three pre-registered research passes found no reading that times BTC or ETH.</p>
+      <p class="lead"><b>What followed, not what will follow.</b> Each tile: where the reading sits in its own past year (bottom fifth = the coldest 20% of days, top fifth = the hottest). Under it: what the coin did in the 30 days after past days in the same fifth, since the reading exists (each tile says its own start). Click a tile for the full path. Three pre-registered research passes found no reading that times BTC or ETH; this tab is for context.</p>
       <div class="controls"><div class="seg" id="state-asset"><button data-a="btc" aria-pressed="true">BTC</button><button data-a="eth">ETH</button></div></div>
-      <div class="glance" id="glance-box"></div>
+      <div id="glance-box"></div>
       <div id="state-detail" style="margin-top:12px"></div>
     </section>
 
@@ -1415,22 +1415,44 @@ const divSeries = (a, b) => (!a || !b) ? null : a.map((x, i) => isNum(x) && isNu
 const STATE_DEF = [
   ['funding', 'Perp funding', 'Funding', (a) => SER.S[a + '_funding'], (v) => fmt.num(v * 100, 2) + ' bps / 8h', 'Binance perp, per funding interval'],
   ['oi_usd', 'Open interest, USD', 'OI, USD', (a) => SER.S['oi_' + a.toUpperCase()], (v) => '$' + fmt.big(v), 'notional, so it rises with price'],
-  ['oi_coins', 'Open interest, coins', 'OI, coins', (a) => divSeries(SER.S['oi_' + a.toUpperCase()], SER.S[a]), (v, a) => fmt.big(v) + ' ' + a.toUpperCase(), 'USD open interest over price'],
+  ['oi_coins', 'Open interest, coins', 'OI, coins', (a) => divSeries(SER.S['oi_' + a.toUpperCase()], SER.S[a]), (v, a) => fmt.int(v) + ' ' + a.toUpperCase(), 'USD open interest over price'],
   ['basis', 'Futures basis', 'Basis', (a) => SER.S['basis_' + a], (v) => fmt.num(v, 1) + '% ann.', 'futures over spot, annualized'],
   ['lsr', 'Long/short ratio', 'Long/short', (a) => SER.S['lsr_' + a.toUpperCase()], (v) => fmt.num(v, 2), 'accounts long over accounts short'],
   ['dvol', 'DVOL', 'DVOL', (a) => SER.S['dvol_' + a], (v) => fmt.num(v, 1), 'Deribit implied volatility index'],
-  ['skew30', '25-delta skew, 30d', 'Skew 30d', (a) => SER.S['skew_' + a], (v) => fmt.num(v, 1) + ' pts', 'put vol over call vol'],
+  ['skew30', '25-delta skew', 'Skew', (a) => SER.S['skew_' + a], (v) => fmt.num(v, 1) + ' pts', 'put vol over call vol'],
   ['ivrv30', 'Implied / realized vol', 'IV / RV', (a) => divSeries(SER.S['atm_iv_' + a], SER.S['rv_' + a]), (v) => fmt.num(v, 2) + 'x', '30d ATM implied over 30d realized'],
   ['price', 'Price itself', 'Price', (a) => SER.S[a], (v) => '$' + fmt.usd(v), 'the control: the same record for price alone'],
+  ['alt_oi', 'Alt OI vs BTC OI', 'Alt OI / BTC', () => altOiRatio(), (v) => fmt.num(v, 2) + 'x', 'ETH plus 18 alts over BTC open interest; above 1x the alts exceed BTC'],
+  ['bigalt_funding', 'Large-alt funding', 'Alt funding', () => bigAltFunding(), (v) => fmt.num(v * 100, 2) + ' bps / 8h', 'median of BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT; the exchange default is 1 bp'],
+  ['alt_froth', 'Alt froth', 'Alt froth', () => null, () => '', 'alt OI above BTC OI AND large-alt funding above the 1 bp default', 'composite'],
 ];
+const ALTS18 = ['BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'LINK', 'APT', 'BCH', 'LTC', 'NEAR', 'SUI', 'ARB', 'ATOM', 'FIL', 'OP', 'UNI'];
+const BIG_ALTS = ['BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'LINK', 'AVAX', 'DOT'];
+function altOiRatio() {
+  const S = SER.S, b = S.oi_BTC, e = S.oi_ETH; if (!b || !e) return null;
+  return b.map((v, i) => { if (!isNum(v) || !v || !isNum(e[i])) return null; let sum = e[i], k = 0; for (const x of ALTS18) { const o = S['oi_' + x]; if (o && isNum(o[i])) { sum += o[i]; k++; } } return k >= 10 ? sum / v : null; });
+}
+function bigAltFunding() {
+  const S = SER.S, cols = BIG_ALTS.map((x) => S['funding_' + x]).filter(Boolean); if (cols.length < 4) return null;
+  return SER.dates.map((_, i) => { const v = cols.map((c) => c[i]).filter(isNum); if (v.length < 4) return null; v.sort((p, q) => p - q); const m = v.length; return m % 2 ? v[(m - 1) / 2] : (v[m / 2 - 1] + v[m / 2]) / 2; });
+}
+/* The composite is on when both conditions hold; its 'fifth' is the word on/off. */
+function altFrothSeries() {
+  const r = altOiRatio(), f = bigAltFunding(); if (!r || !f) return null;
+  const q = r.map((v, i) => (isNum(v) && isNum(f[i])) ? (v > 1 && f[i] > 0.0101 ? 'on' : 'off') : null);
+  return { arr: q.map((x) => x === 'on' ? 1 : x === 'off' ? 0 : null), pct: q.map(() => null), q };
+}
 const QL = ['bottom', 'low', 'mid', 'high', 'top'];
-function pctAt(arr, i) { if (!arr || i < 0 || !isNum(arr[i])) return null; const w = arr.slice(Math.max(0, i - 364), i + 1).filter(isNum); if (w.length < 180) return null; let c = 0; for (const v of w) if (v <= arr[i]) c++; return c / w.length; }
-const quint = (p) => isNum(p) ? QL[Math.min(4, Math.floor(p / 0.2))] : null;
+/* Share of the previous 364 days at or below today's value (the current day is excluded, as in the research panel's rolling rank). */
+function pctAt(arr, i) { if (!arr || i < 0 || !isNum(arr[i])) return null; const w = arr.slice(Math.max(0, i - 364), i + 1).filter(isNum); if (w.length < 180) return null; let c = 0; for (const v of w) if (v <= arr[i]) c++; return (c - 1) / (w.length - 1); }
+const quint = (p) => !isNum(p) ? null : p >= 0.8 ? 'top' : p >= 0.6 ? 'high' : p >= 0.4 ? 'mid' : p >= 0.2 ? 'low' : 'bottom';
 /* Percentile and fifth for every day of a reading, computed once per asset and reading. */
 function stateSeries(a, key) {
   const c = (STATE_CACHE[a] = STATE_CACHE[a] || {});
   if (key in c) return c[key];
-  const def = STATE_DEF.find((d) => d[0] === key); const arr = def ? def[3](a) : null;
+  const def = STATE_DEF.find((d) => d[0] === key);
+  if (def && def[6] === 'composite') return (c[key] = altFrothSeries());
+  const arr = def ? def[3](a) : null;
   if (!arr || !arr.some(isNum)) return (c[key] = null);
   const pct = arr.map((_, i) => pctAt(arr, i));
   return (c[key] = { arr, pct, q: pct.map(quint) });
@@ -1446,9 +1468,10 @@ function fwdDrop(a, W = 30, thr = -0.10) {
   const c = (STATE_CACHE[a] = STATE_CACHE[a] || {}); if (c._drop) return c._drop;
   const px = SER.S[a] || [], n = px.length, out = new Array(n).fill(null);
   for (let t = 0; t < n; t++) {
-    if (!isNum(px[t]) || t + W >= n) continue;
-    let mn = Infinity; for (let k = 1; k <= W; k++) { const v = px[t + k]; if (isNum(v) && v < mn) mn = v; }
-    out[t] = mn < Infinity ? (mn / px[t] - 1 <= thr) : null;
+    if (!isNum(px[t])) continue;
+    let mn = Infinity; for (let k = 1; k <= W && t + k < n; k++) { const v = px[t + k]; if (isNum(v) && v < mn) mn = v; }
+    // a drop already seen inside a still-open window counts; an open window without one is 'not known yet'
+    out[t] = mn < Infinity && mn / px[t] - 1 <= thr ? true : (t + W < n ? false : null);
   }
   return (c._drop = out);
 }
@@ -1458,7 +1481,7 @@ function fanData(a, key, q, K = 60) {
   if (!s) return null;
   const paths = [], allPaths = [], flagged = [];
   for (let t = 1; t < n - K; t++) {
-    if (!isNum(px[t])) continue;
+    if (!isNum(px[t]) || s.q[t - 1] == null) continue;  // the reference set is the days on which the reading had a state
     const p = new Array(K + 1); let ok = true;
     for (let k = 0; k <= K; k++) { const v = px[t + k]; if (!isNum(v)) { ok = false; break; } p[k] = v / px[t] - 1; }
     if (!ok) continue;
@@ -1472,17 +1495,19 @@ function fanData(a, key, q, K = 60) {
     return { med, lo, hi };
   };
   let eps = 0, last = -1e9; for (const t of flagged) { if (t - last > 30) eps++; last = t; }
-  return { K, n: paths.length, eps, nAll: allPaths.length, state: stat(paths), all: stat(allPaths), since: SER.dates[flagged[0]] };
+  return { K, n: paths.length, eps, nAll: allPaths.length, state: stat(paths), all: stat(allPaths), since: SER.dates[flagged[0] - 1] };
 }
-const AGREE_TXT = { consistent: 'the 30-day direction agreed in all three research periods', 'consistent-2of3': 'agreed in the two periods with enough episodes; the third had too few', mixed: 'the direction differed between periods: no stable reading', insufficient: 'too few independent episodes to compare periods' };
-const agreeChip = (s) => '<span class="agree ' + esc(s || 'insufficient') + '" title="' + esc(AGREE_TXT[s] || '') + '">' + esc(s === 'consistent-2of3' ? '2 of 3' : s || 'n/a') + '</span>';
+const AGREE_TXT = { consistent: 'the 30-day direction agreed in all three research periods (2019-24H1, 2024H2-25, 2026); agreement is not causation', 'consistent-2of3': 'agreed in the two periods with enough episodes; the third had too few', mixed: 'the direction differed between periods: no stable reading', insufficient: 'too few independent episodes to compare periods' };
+const AGREE_LBL = { consistent: 'same direction in 3 of 3 periods', 'consistent-2of3': 'same direction in 2 of 3 periods', mixed: 'periods disagree', insufficient: 'too few episodes' };
+const agreeChip = (s) => '<span class="agree ' + esc(s || 'insufficient') + '" title="' + esc(AGREE_TXT[s] || '') + '">' + esc(AGREE_LBL[s] || 'n/a') + '</span>';
 const pc = (x, d = 1) => isNum(x) ? '<span class="' + cls(x) + '">' + fmt.pct(x * 100, d) + '</span>' : '–';
 const shareTxt = (x) => isNum(x) ? Math.round(x * 100) + '%' : '–';
 const periodSpan = (p) => { const r = (BR.periods || {})[p] || []; return (r[0] || '2019') + ' to ' + (r[1] || 'now'); };
+function readingTable(a, key) { if (key === 'alt_froth') return BR.composites && BR.composites.alt_froth ? BR.composites.alt_froth[a] : null; return ((BR.readings || {})[a] || {})[key]; }
 
 /* ----- canvas helpers ----- */
 function canvasSetup(c, h) {
-  const w = Math.max(280, c.parentElement.clientWidth || 600), dpr = window.devicePixelRatio || 1;
+  const w = Math.max(200, c.parentElement.clientWidth || 600), dpr = window.devicePixelRatio || 1;
   c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px';
   const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return { ctx, w, h };
 }
@@ -1494,25 +1519,40 @@ function rgba(col, a) {
 }
 function qColor(q) {
   if (!q) return 'transparent';
-  if (q === 'mid') return rgba(css('--text-3'), 0.16);
+  if (q === 'mid' || q === 'off') return rgba(css('--text-3'), q === 'off' ? 0.10 : 0.16);
+  if (q === 'on') return rgba(css('--hot'), 0.92);
   const hot = q === 'top' || q === 'high';
   return rgba(css(hot ? '--hot' : '--cold'), q === 'top' || q === 'bottom' ? 0.92 : 0.38);
 }
 
 /* ----- glance tiles ----- */
 function drawGlance() {
-  const box = $('#glance-box'), a = STATE_ASSET; const R = (BR.readings || {})[a] || {}; let html = '';
-  for (const [key, label, short, pick, fmtv, note] of STATE_DEF) {
-    const st = stateNow(a, key); const E = R[key]; const S = st && E ? E.states[st.q] : null; const P = S && S.pooled; const r30 = P && P.ret30, m = P && P.mdd30;
+  const box = $('#glance-box'), a = STATE_ASSET; let html = '';
+  for (const [key, label, short, pick, fmtv, note, kind] of STATE_DEF) {
+    const st = stateNow(a, key); const E = readingTable(a, key); const S = st && E ? E.states[st.q] : null; const P = S && S.pooled; const r30 = P && P.ret30, m = P && P.mdd30;
+    if (kind === 'composite') {
+      const SO = E && E.states ? E.states.on : null, PO = SO && SO.pooled; const r30o = PO && PO.ret30, mo = PO && PO.mdd30, alt30 = PO && PO.altrel30; const runs = E && E.runs || {};
+      html += '<button type="button" class="tile' + (STATE_SEL === key ? ' sel' : '') + '" data-key="' + key + '" title="' + esc(note) + '">' +
+        '<div class="t-head"><span class="t-name">' + esc(label) + '</span><span class="t-val">' + (st ? '<span class="chip ' + (st.q === 'on' ? 'hot' : '') + '">' + st.q + '</span>' : '–') + '</span></div>' +
+        '<div class="t-state">' + esc(note) + (st ? ' · ' + st.q + ' for ' + st.days + (st.days === 1 ? ' day' : ' days') + (E && E.last_on && st.q === 'off' ? ' · last on ' + esc(E.last_on) : '') : '') + '</div>' +
+        '<div class="t-next">' + (r30o ? 'after days when it was on, 30d later: ' + a.toUpperCase() + ' mean ' + pc(r30o.mean) + ' <span class="mute">vs ' + pc(r30o.mean - r30o.excess) + ' on all days</span>' + (alt30 ? '<br>alts vs BTC: ' + pc(alt30.mean) + ' <span class="mute">vs ' + pc(alt30.mean - alt30.excess) + '</span>' : '') + '<br>fell 10%+ within 30d: ' + shareTxt(mo && mo.p_le_10) + ' of the time <span class="mute">(' + shareTxt(mo && mo.base_p_le_10) + ' over the same span)</span>' : '<span class="mute">no history</span>') + '</div>' +
+        '<div class="t-chips">' + (SO ? agreeChip(SO.agreement_ret30) : '') + (r30o ? '<span class="chip" title="separate on-stretches more than 30 days apart since ' + esc(E.source_start || '') + '">' + fmt.int(r30o.n_ind) + ' past stretches</span>' : '') + (isNum(runs.median_days) ? '<span class="chip" title="' + fmt.int(runs.n_runs) + ' on-runs; typical length and the 1-in-10 longest">runs ' + fmt.int(runs.median_days) + 'd typical, ' + fmt.int(runs.p90_days) + 'd+ 1 in 10</span>' : '') + (E && E.caveat ? '<span class="chip warn" title="' + esc(E.caveat) + '">caveat</span>' : '') + '</div></button>';
+      continue;
+    }
     const segs = QL.map((q) => '<i class="' + q + (st && st.q === q ? ' on' : '') + '" title="' + q + ' fifth"></i>').join('');
     html += '<button type="button" class="tile' + (STATE_SEL === key ? ' sel' : '') + '" data-key="' + key + '" title="' + esc(note) + '">' +
       '<div class="t-head"><span class="t-name">' + esc(label) + '</span><span class="t-val">' + (st ? fmtv(st.value, a) : '–') + '</span></div>' +
       '<div class="fifths">' + segs + '</div>' +
-      '<div class="t-state">' + (st ? '<b>' + st.q + ' fifth</b> · ' + st.days + (st.days === 1 ? ' day' : ' days') + ' · ' + ord(st.pct * 100) + ' pct of its year' : '<span class="mute">no series in data.json</span>') + '</div>' +
-      '<div class="t-next">' + (r30 ? 'next 30d ' + pc(r30.median) + ' median · 10% drop ' + shareTxt(m && m.p_le_10) + ' <span class="mute">vs ' + shareTxt(m && m.base_p_le_10) + ' on all days</span>' : '<span class="mute">no history for this state</span>') + '</div>' +
-      '<div class="t-chips">' + (S ? agreeChip(S.agreement_ret30) : '') + (r30 ? '<span class="chip">' + r30.n_ind + ' episodes</span>' : '') + (E && E.caveat ? '<span class="chip warn">caveat</span>' : '') + '</div></button>';
+      '<div class="t-state">' + (st ? '<b>' + st.q + ' fifth</b> · ' + st.days + (st.days === 1 ? ' day' : ' days') + ' there · higher than ' + Math.round(st.pct * 100) + '% of the past year' + (st.date && DATA && DATA.panel_end && st.date !== DATA.panel_end ? ' · as of ' + esc(st.date) : '') : '<span class="mute">no series in data.json</span>') + '</div>' +
+      '<div class="t-next">' + (r30 ? 'after such days, 30d later: mean ' + pc(r30.mean) + ' <span class="mute">vs ' + pc(r30.mean - r30.excess) + ' on all days</span><br>fell 10%+ within 30d: ' + shareTxt(m && m.p_le_10) + ' of the time <span class="mute">(' + shareTxt(m && m.base_p_le_10) + ' over the same span)</span>' : '<span class="mute">no history for this state</span>') + '</div>' +
+      '<div class="t-chips">' + (S ? agreeChip(S.agreement_ret30) : '') + (r30 ? '<span class="chip" title="separate stretches of such days, more than 30 days apart, since ' + esc(E.source_start || '') + '">' + fmt.int(r30.n_ind) + ' past stretches</span>' : '') + (E && E.caveat ? '<span class="chip warn" title="' + esc(E.caveat) + '">caveat</span>' : '') + '</div></button>';
   }
-  box.innerHTML = html;
+  const tops = [], bots = [];
+  let froth = null;
+  for (const [key, label] of STATE_DEF) { if (key === 'price') continue; const st = stateNow(a, key); if (key === 'alt_froth') { froth = st && st.q; continue; } if (st && st.q === 'top') tops.push(label.toLowerCase()); if (st && st.q === 'bottom') bots.push(label.toLowerCase()); }
+  const px = SER.S[a] || [], li = lastIdx(px); let hi30 = -Infinity; for (let k = Math.max(0, li - 30); k <= li; k++) if (isNum(px[k]) && px[k] > hi30) hi30 = px[k];
+  const summary = '<div class="foot" style="margin:0 0 10px;display:block;border-top:0;padding-top:0"><b style="color:var(--text)">Today</b>: ' + (tops.length ? tops.length + ' in the top fifth (' + esc(tops.join(', ')) + ')' : 'nothing in the top fifth') + ' · ' + (bots.length ? bots.length + ' in the bottom fifth (' + esc(bots.join(', ')) + ')' : 'nothing in the bottom fifth') + (isNum(hi30) && isNum(px[li]) ? ' · ' + a.toUpperCase() + ' is ' + fmt.pct((px[li] / hi30 - 1) * 100, 1) + ' from its 30-day high' : '') + (froth ? ' · alt froth <b style="color:var(--text)">' + esc(froth) + '</b>' : '') + '</div>';
+  box.innerHTML = summary + '<div class="glance">' + html + '</div>';
   $$('.tile', box).forEach((b) => b.addEventListener('click', () => {
     STATE_SEL = b.dataset.key; $$('.tile', box).forEach((t) => t.classList.toggle('sel', t.dataset.key === STATE_SEL));
     safe(() => drawFan(STATE_SEL)); const el = $('#state-detail'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1532,14 +1572,23 @@ function stateDetails(E, S) {
     table([['Period', ''], ['Days in state', 'num'], ['10d', 'num'], ['30d', 'num'], ['60d', 'num'], ['90d', 'num'], ['10% dd in 30d', 'num'], ['Fwd vol 30d', 'num']], rows) + '</details>';
 }
 function drawFan(key) {
-  const box = $('#state-detail'); if (!box) return; const a = STATE_ASSET; const def = STATE_DEF.find((d) => d[0] === key); const st = def ? stateNow(a, key) : null;
+  const box = $('#state-detail'); if (!box) return; const a = STATE_ASSET; const def = STATE_DEF.find((d) => d[0] === key); let st = def ? stateNow(a, key) : null;
   if (!st) { box.innerHTML = ''; return; }
-  const E = ((BR.readings || {})[a] || {})[key]; const S = E ? E.states[st.q] : null; const fd = fanData(a, key, st.q);
-  box.innerHTML = '<div class="card"><h3>' + a.toUpperCase() + ' after days when ' + esc(def[1].charAt(0).toLowerCase() + def[1].slice(1)) + ' was in its <span class="chip ' + (st.q === 'top' ? 'hot' : st.q === 'bottom' ? 'cold' : '') + '">' + st.q + ' fifth</span></h3>' +
+  const comp = def[6] === 'composite'; if (comp) st = { ...st, q: 'on' };
+  const E = readingTable(a, key); const S = E ? E.states[st.q] : null;
+  const wasOpen = !!(box.querySelector('details') || {}).open;
+  box.innerHTML = '<div class="card"><h3>' + a.toUpperCase() + ' after days when ' + esc(def[1].charAt(0).toLowerCase() + def[1].slice(1)) + ' was ' + (comp ? '' : 'in its ') + '<span class="chip ' + ((st.q === 'top' || st.q === 'high' || st.q === 'on') ? 'hot' : (st.q === 'bottom' || st.q === 'low') ? 'cold' : '') + '">' + st.q + (comp ? '' : ' fifth') + '</span></h3>' +
     '<div class="fan-wrap"><canvas id="fan-canvas"></canvas></div><div class="foot" id="fan-foot"></div>' +
     (E && E.caveat ? '<div class="foot">Caveat: ' + esc(E.caveat) + '</div>' : '') + (S ? stateDetails(E, S) : '') + '</div>';
+  if (wasOpen) { const dt = box.querySelector('details'); if (dt) dt.open = true; }
+  paintFan(key);
+}
+function paintFan(key) {
+  const box = $('#state-detail'); if (!box || !box.querySelector('#fan-canvas')) return; const a = STATE_ASSET; let st = stateNow(a, key); if (!st) return; if ((STATE_DEF.find((d) => d[0] === key) || [])[6] === 'composite') st = { ...st, q: 'on' };
+  const FC = (STATE_CACHE[a] = STATE_CACHE[a] || {}); const ck = '_fan_' + key + '_' + st.q; if (!(ck in FC)) FC[ck] = fanData(a, key, st.q); const fd = FC[ck];
   const foot = $('#fan-foot');
-  if (!fd) { $('.fan-wrap').style.display = 'none'; foot.textContent = 'Fewer than 5 past days in this state with 60 days of history after them.'; return; }
+  if (!fd || fd.eps < 3) { $('.fan-wrap').style.display = 'none'; foot.textContent = 'Only ' + (fd ? fd.eps : 0) + ' separate stretch' + (fd && fd.eps === 1 ? '' : 'es') + ' of such days in the series: too few to draw a path. The tile figures are the full record.'; return; }
+  $('.fan-wrap').style.display = '';
   const c = $('#fan-canvas'); const { ctx, w, h } = canvasSetup(c, 230);
   const L = 48, R = 14, T = 12, B = 26, W = w - L - R, H = h - T - B;
   const vals = [...fd.state.lo, ...fd.state.hi, ...fd.all.med]; const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
@@ -1561,9 +1610,9 @@ function drawFan(key) {
   ticks.forEach((v) => ctx.fillText(fmt.pct(v * 100, 0), L - 5, y(v) + 4));
   ctx.textAlign = 'center'; [0, 10, 20, 30, 40, 50, 60].forEach((k) => ctx.fillText(k ? k + 'd' : 'now', x(k), h - 8));
   ctx.textAlign = 'left'; ctx.fillStyle = css('--text-2');
-  ctx.fillText('solid: median path in this state · band: 10th to 90th pct · dashed: median of all days', L + 4, T + 10);
+  ctx.fillText('solid: median path after such days · band: the middle 80% of those paths · dashed: median after all days', L + 4, T + 10);
   const m30 = fd.state.med[30], a30 = fd.all.med[30], lo30 = fd.state.lo[30], hi30 = fd.state.hi[30];
-  foot.innerHTML = fd.n + ' past days in this state since ' + esc(fd.since) + ' (' + fd.eps + ' separate episodes) against ' + fd.nAll + ' days in all. At 30 days: median ' + pc(m30) + ' vs ' + pc(a30) + ' on all days; one in ten was worse than ' + pc(lo30) + ', one in ten better than ' + pc(hi30) + '. Overlapping windows: the episodes, not the days, are the sample size.';
+  foot.innerHTML = fmt.int(fd.n) + ' past days like this since ' + esc(fd.since) + ', in ' + fmt.int(fd.eps) + ' separate stretches, against ' + fmt.int(fd.nAll) + ' days with a reading. 30 days later: median ' + pc(m30) + ' vs ' + pc(a30) + ' after all days; one in ten was worse than ' + pc(lo30) + ', one in ten better than ' + pc(hi30) + '. Days with 60 days of history after them; the stretches, not the days, are the sample size.';
 }
 
 /* ----- regime map: price, one strip per reading, and the drop row ----- */
@@ -1593,19 +1642,18 @@ function drawRegime() {
   }
   ctx.fillStyle = css('--text-3'); ctx.textAlign = 'right';
   ctx.fillText('$' + fmt.int(Math.exp(hi)), L - 6, T + 10); ctx.fillText('$' + fmt.int(Math.exp(lo)), L - 6, T + PH);
-  ctx.textAlign = narrow ? 'right' : 'left'; ctx.fillStyle = css('--text-2'); ctx.fillText(a.toUpperCase() + ' price, log · ▲ TD9 buy ▼ TD9 sell', narrow ? L + W : L + 4, T + 10);
+  if (!narrow) { ctx.textAlign = 'left'; ctx.fillStyle = css('--text-2'); ctx.fillText(a.toUpperCase() + ' price, log · ▲ TD9 buy ▼ TD9 sell', L + 4, T + 10); }
   rows.forEach((r, ri) => {
     const Y = T + PH + GAP + ri * RH;
     ctx.fillStyle = css('--text-2'); ctx.textAlign = 'right'; ctx.fillText(r.label, L - 6, Y + RH - 4);
     if (!r.s) return;
-    for (let i = start; i <= end; i++) { const q = r.s.q[i]; if (!q) continue; ctx.fillStyle = qColor(q); ctx.fillRect(x(i), Y + 2, bw + 0.7, RH - 4); }
+    let i = start;
+    while (i <= end) { const q = r.s.q[i]; let j = i; while (j < end && r.s.q[j + 1] === q) j++; if (q) { ctx.fillStyle = qColor(q); ctx.fillRect(x(i), Y + 2, Math.min(L + W, x(j + 1)) - x(i), RH - 4); } i = j + 1; }
   });
   const Yd = T + PH + GAP + rows.length * RH, drops = fwdDrop(a);
   ctx.fillStyle = css('--text-2'); ctx.textAlign = 'right'; ctx.fillText(narrow ? '10% drop next' : '10% drop within 30d', L - 6, Yd + RH - 4);
-  for (let i = start; i <= end; i++) {
-    if (drops[i] === true) { ctx.fillStyle = rgba(css('--down'), 0.85); ctx.fillRect(x(i), Yd + 2, bw + 0.7, RH - 4); }
-    else if (drops[i] === false) { ctx.fillStyle = rgba(css('--text-3'), 0.12); ctx.fillRect(x(i), Yd + 2, bw + 0.7, RH - 4); }
-  }
+  { let i = start; while (i <= end) { const v = drops[i]; let j = i; while (j < end && drops[j + 1] === v) j++; if (v === true || v === false) { ctx.fillStyle = v ? rgba(css('--down'), 0.85) : rgba(css('--text-3'), 0.12); ctx.fillRect(x(i), Yd + 2, Math.min(L + W, x(j + 1)) - x(i), RH - 4); } i = j + 1; } }
+  { let firstNull = -1; for (let i = start; i <= end; i++) if (drops[i] === null && isNum(px[i])) { firstNull = i; break; } if (firstNull >= 0) { ctx.fillStyle = css('--text-3'); ctx.textAlign = 'left'; ctx.font = '10px ' + css('--font'); ctx.fillText('not known yet', Math.min(x(firstNull) + 2, L + W - 70), Yd + RH - 4); ctx.font = '11px ' + css('--font'); } }
   ctx.fillStyle = css('--text-3'); ctx.textAlign = 'center';
   const step = span > 1000 ? 12 : span > 450 ? (narrow ? 6 : 3) : (narrow ? 3 : 1);
   for (let i = start; i <= end; i++) {
@@ -1614,46 +1662,49 @@ function drawRegime() {
     const X = x(i); ctx.fillRect(X, Yd + RH + 2, 1, 4); ctx.fillText(step === 12 ? d.slice(0, 4) : shortDate(d) + (m === 1 ? ' ' + d.slice(2, 4) : ''), X, Yd + RH + 16);
   }
   REGIME_GEO = { start, end, L, W, T, PH, GAP, RH, rows, drops, px };
-  $('#regime-legend').innerHTML = QL.map((q) => '<span><i style="background:' + qColor(q) + '"></i>' + q + ' fifth</span>').join('') + '<span><i style="background:' + rgba(css('--down'), 0.85) + '"></i>10% drop followed</span><span><i style="background:' + rgba(css('--text-3'), 0.12) + '"></i>no 10% drop</span>';
+  $('#regime-legend').innerHTML = QL.map((q) => '<span><i style="background:' + qColor(q) + '"></i>' + q + ' fifth</span>').join('') + '<span><i style="background:' + rgba(css('--down'), 0.85) + '"></i>10% drop followed</span><span><i style="background:' + rgba(css('--text-3'), 0.12) + '"></i>no 10% drop</span><span><i style="background:transparent"></i>blank: next 30 days not over yet</span><span><i style="background:' + qColor('on') + '"></i>alt froth on</span>';
 }
 function regimeHover(ev) {
   const g = REGIME_GEO, tip = $('#regime-tip'); if (!g || !tip) return;
   const rect = ev.currentTarget.getBoundingClientRect(); const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
   if (mx < g.L || mx > g.L + g.W) { tip.style.display = 'none'; return; }
-  const i = Math.round(g.start + (mx - g.L) / g.W * (g.end - g.start));
+  const i = Math.min(g.end, Math.floor(g.start + (mx - g.L) / g.W * (g.end - g.start)));
   const d = SER.dates[i]; if (!d) { tip.style.display = 'none'; return; }
   let html = '<b>' + esc(d) + '</b> · $' + fmt.usd(g.px[i]);
-  for (const r of g.rows) { const q = r.s ? r.s.q[i] : null; const p = r.s ? r.s.pct[i] : null; html += '<br>' + esc(r.label) + ': ' + (q ? q + ' (' + ord(p * 100) + ')' : '–'); }
-  html += '<br>10% drop within 30d: ' + (g.drops[i] === true ? 'yes' : g.drops[i] === false ? 'no' : 'not yet known');
+  for (const r of g.rows) { const q = r.s ? r.s.q[i] : null; const p = r.s ? r.s.pct[i] : null; html += '<br>' + esc(r.label) + ': ' + (q ? q + (isNum(p) ? ' (' + ord(p * 100) + ')' : '') : '–'); }
+  html += '<br>10% drop within 30d: ' + (g.drops[i] === true ? 'yes' : g.drops[i] === false ? 'no' : 'not yet, window still open');
   tip.innerHTML = html; tip.style.display = 'block';
-  const tw = tip.offsetWidth; tip.style.left = Math.min(rect.width - tw - 4, Math.max(0, mx + 12)) + 'px'; tip.style.top = Math.max(0, my - 10) + 'px';
+  const tw = tip.offsetWidth; tip.style.left = Math.min(rect.width - tw - 4, Math.max(0, mx + 12)) + 'px'; tip.style.top = Math.max(0, Math.min(my - 10, rect.height - tip.offsetHeight)) + 'px';
 }
 
 /* ----- crowding cards ----- */
 function drawCrowding() {
   const box = $('#crowd-box'), a = STATE_ASSET; const R = (BR.readings || {})[a] || {};
   const active = [];
-  for (const [key, label] of STATE_DEF) { if (key === 'price') continue; const st = stateNow(a, key); if (st && (st.q === 'top' || st.q === 'bottom') && R[key]) active.push({ label, st, E: R[key] }); }
+  for (const [key, label] of STATE_DEF) { if (key === 'price' || key === 'alt_froth') continue; const st = stateNow(a, key); if (st && (st.q === 'top' || st.q === 'bottom') && R[key]) active.push({ label, st, E: R[key] }); }
   let html = '<div class="card"><h3>Extreme readings now <span class="mute">top or bottom fifth of their own year</span></h3>';
   if (!active.length) html += '<div class="empty">Nothing is in its top or bottom fifth today.</div>';
   for (const x of active) {
     const runs = x.E.top_quintile_runs || {}, per = x.E.persistence || {};
     const still = x.st.q === 'top' ? per.top_still_top_after_14d : per.bottom_still_bottom_after_14d;
     html += '<div class="row"><span class="l">' + esc(x.label) + ' <span class="chip ' + (x.st.q === 'top' ? 'hot' : 'cold') + '">' + x.st.q + '</span></span><span style="text-align:right">' + x.st.days + ' days' +
-      (x.st.q === 'top' && isNum(runs.median_days) ? '<div class="mute small">top runs typically ' + fmt.int(runs.median_days) + ' days, ' + fmt.int(runs.p90_days) + ' at the 90th pct, ' + runs.n_runs + ' runs</div>' : '') +
+      (x.st.q === 'top' && isNum(runs.median_days) ? '<div class="mute small">past top runs: typically ' + fmt.int(runs.median_days) + ' days; 1 in 10 lasted ' + fmt.int(runs.p90_days) + '+ (' + fmt.int(runs.n_runs) + ' runs)</div>' : '') +
       (isNum(still) ? '<div class="mute small">still ' + x.st.q + ' two weeks later ' + shareTxt(still) + ' of the time</div>' : '') + '</span></div>';
   }
   html += '</div>';
+  let anyTop = false;
   for (const key of ['funding', 'oi_usd', 'basis', 'lsr']) {
-    const E = R[key]; if (!E || !E.top_quintile_duration) continue; const def = STATE_DEF.find((x) => x[0] === key);
+    const E = R[key]; if (!E || !E.top_quintile_duration) continue; const def = STATE_DEF.find((x) => x[0] === key); const stq = (stateNow(a, key) || {}).q; if (stq !== 'top') continue; anyTop = true;
     const rows = Object.entries(E.top_quintile_duration).map(([b, v]) => {
       const all = v.pooled || {}, va = v.validation || {};
-      return [esc(b) + ' days', isNum(all.n_ind) ? fmt.int(all.n_ind) : '<span class="mute">' + (all.n_days || 0) + ' days</span>', pc(all.ret30_excess), isNum(all.p_le_10) ? shareTxt(all.p_le_10) : '–', pc(va.ret30_excess), isNum(va.p_le_10) ? shareTxt(va.p_le_10) + ' <span class="mute">(' + (va.n_ind ?? 0) + ')</span>' : '–'];
+      if (!isNum(all.n_ind) || all.n_ind < 2) return [esc(b) + ' days', '<span class="mute">' + (isNum(all.n_ind) ? all.n_ind + ' episode' : 'none') + '</span>', '–', '–', '–', '–'];
+      return [esc(b) + ' days', fmt.int(all.n_ind), pc(all.ret30_excess), isNum(all.p_le_10) ? shareTxt(all.p_le_10) : '–', pc(va.ret30_excess), isNum(va.p_le_10) ? shareTxt(va.p_le_10) + ' <span class="mute">(' + fmt.int(va.n_ind ?? 0) + ')</span>' : '–'];
     });
-    html += '<div class="card"><h3>' + esc(def[1]) + ' in its top fifth <span class="mute">by days already spent there</span></h3>' +
+    html += '<div class="card"><h3>' + esc(def[1]) + ' in its top fifth <span class="chip hot">now, day ' + fmt.int(stateNow(a, key).days) + '</span></h3><div class="foot" style="margin:0 0 6px">What followed past top-fifth stretches, by how many days they had already lasted.</div>' +
       table([['Days in state', ''], ['Episodes', 'num'], ['30d vs all, all data', 'num'], ['10% dd, all data', 'num'], ['30d vs all, 2024-25', 'num'], ['10% dd, 2024-25', 'num']], rows) +
       '<div class="foot">Consecutive days in the top fifth, outcome over the following 30 days. Rows with a handful of episodes describe a handful of episodes.</div></div>';
   }
+  if (!anyTop) html += '<div class="card"><h3>Time in a crowded state</h3><div class="empty">No funding, open-interest, basis or long/short reading is in its top fifth today; the by-duration tables appear when one is.</div></div>';
   box.innerHTML = html;
 }
 
@@ -1680,9 +1731,9 @@ function tdFrames(a) {
   const n = idx.length, i3 = idx.filter((_, k) => (n - 1 - k) % 3 === 0);
   frames.push({ tf: '3D', c: i3.map((i) => daily[i]), t: i3.map((i) => dates[i]), bar: '3-day bar' });
   const H = DATA && DATA.live && DATA.live.hourly_closes && DATA.live.hourly_closes[a.toUpperCase()];
-  if (H && Array.isArray(H.c) && H.c.length > 40) {
+  if (H && Array.isArray(H.c) && Array.isArray(H.t) && H.t.length === H.c.length && H.c.length > 40) {
     const iso = (x) => new Date(x * 1000).toISOString().slice(0, 16).replace('T', ' ') + 'Z';
-    const g = new Map(); H.t.forEach((x, k) => { if (isNum(H.c[k])) g.set(Math.floor(x / 14400), { c: H.c[k], t: Math.floor(x / 14400) * 14400 }); });
+    const g = new Map(); H.t.forEach((x, k) => { if (isNum(x) && isNum(H.c[k])) g.set(Math.floor(x / 14400), { c: H.c[k], t: Math.floor(x / 14400) * 14400 }); });
     const b4 = [...g.values()];
     frames.push({ tf: '4H', c: b4.map((x) => x.c), t: b4.map((x) => iso(x.t)), bar: '4-hour bar' });
     frames.push({ tf: '1H', c: H.c, t: H.t.map(iso), bar: 'hour' });
@@ -1691,14 +1742,15 @@ function tdFrames(a) {
 }
 const TD_LABEL = { buy9: 'buy setup 9', sell9: 'sell setup 9', buy13: 'buy countdown 13', sell13: 'sell countdown 13' };
 function tdBaseLines(tf, a) {
-  const B = BR.td && BR.td[tf] && BR.td[tf][a]; if (!B) return '';
+  const B = BR && BR.td && BR.td[tf] && BR.td[tf][a]; if (!B) return '';
   let out = '';
   for (const f of ['buy9', 'sell9', 'buy13', 'sell13']) {
     const s = B[f]; if (!s || !s.h10_train && !s.h10_validation && !s.h10_test) continue;
-    const per = ['train', 'validation', 'test'].map((p) => s['h10_' + p] ? pc(s['h10_' + p].excess) + '<span class="mute">(' + s['h10_' + p].n_ind + ')</span>' : '<span class="mute">–</span>').join(' / ');
+    const per = ['train', 'validation', 'test'].map((p) => s['h10_' + p] ? pc(s['h10_' + p].excess) + '<span class="mute">(' + fmt.int(s['h10_' + p].n_ind) + ')</span>' : '<span class="mute">–</span>').join(' / ');
     out += '<div class="row"><span class="l">after a ' + esc(TD_LABEL[f]) + ', 10 bars later</span><span>' + per + ' ' + agreeChip(s.agreement_h10) + '</span></div>';
   }
-  return out ? '<div class="foot" style="margin-top:6px">Return vs all bars, train / validation / test (episodes). Book says buys bounce and sells fade.</div>' + out : '';
+  const spans = (tf === '1D' || tf === '3D') ? ['train', 'validation', 'test'].map(periodSpan).join(' / ') : '2024-11 to 2025-06 / 2025-07 to 2025-12 / 2026';
+  return out ? '<div class="foot" style="margin-top:6px">Return vs all bars in ' + esc(spans) + ' (episodes in brackets). The book says buys bounce and sells fade.</div>' + out : '';
 }
 function drawTD() {
   const box = $('#td-box'); if (!box) return; let html = '';
@@ -1708,7 +1760,7 @@ function drawTD() {
       if (F.missing) { html += '<div class="tdcell"><div class="mute small">' + esc(F.tf) + '</div><div class="empty" style="margin:6px 0 0">Hourly closes are not in live.json yet; the counts appear here once the live daemon publishes them.</div></div>'; continue; }
       const r = tdSeq(F.c); const n = F.c.length, s = r.setup[n - 1];
       const last = r.events.length ? r.events[r.events.length - 1] : null;
-      const cnt = (side, k) => k >= 9 ? '<span class="' + (side === 'Sell' ? 'neg' : 'pos') + '">' + side + ' 9 complete</span><span class="mute"> · run at bar ' + k + '</span>' : '<span class="' + (side === 'Sell' ? 'neg' : 'pos') + '">' + side + ' ' + k + '</span><span class="mute"> of 9</span>';
+      const cnt = (side, k) => k >= 9 ? '<span>' + side + ' 9 complete</span><span class="mute"> · run at bar ' + k + '</span>' : '<span>' + side + ' ' + k + '</span><span class="mute"> of 9</span>';
       const cur = s > 0 ? cnt('Sell', s) : s < 0 ? cnt('Buy', -s) : '<span class="mute">no count</span>';
       const cd = r.cdBuy !== null ? '<div class="row"><span class="l">buy countdown</span><span>' + r.cdBuy + ' / 13</span></div>' : r.cdSell !== null ? '<div class="row"><span class="l">sell countdown</span><span>' + r.cdSell + ' / 13</span></div>' : '';
       html += '<div class="tdcell"><div class="mute small">' + esc(F.tf) + ' <span class="mute">· ' + esc(F.t[n - 1]) + '</span></div><div class="big">' + cur + '</div>' + cd +
@@ -1722,12 +1774,18 @@ function drawTD() {
 function drawEvidence() {
   const box = $('#evidence-box'); if (!box) return; const g = BR.generated_from || {};
   let html = '<div class="row"><span class="l">Tables built from</span><span>daily ' + esc((g.daily || []).join(' to ')) + (g.hourly ? ' · hourly ' + esc(g.hourly.map((x) => String(x).slice(0, 10)).join(' to ')) : '') + '</span></div>' +
-    '<div class="row"><span class="l">Method</span><span style="text-align:right;max-width:70%">' + esc(BR.method || '') + '</span></div>';
+    '<div class="row"><span class="l">Method (technical)</span><span style="text-align:right;max-width:70%">' + esc(BR.method || '') + '</span></div>';
   for (const n of (BR.notes || [])) html += '<div class="row"><span class="l">' + esc(n.title) + '</span><span style="text-align:right;max-width:70%">' + esc(n.text) + '</span></div>';
   html += '<div class="foot">Pre-registrations, harness and full results: Hermes-Research, research/outside/ (PREREG3.md, PASS3_2026-11-19.md). A state that was followed by weak returns in the past is a base rate with its episode count, not a forecast; the research passes found no reading that passed the pre-registered rules for a signal.</div>';
   box.innerHTML = html;
 }
-function drawStateVisuals() { if (!BR || !rendered.has('state')) return; safe(drawRegime); if (STATE_SEL) safe(() => drawFan(STATE_SEL)); }
+let STATE_DIRTY = false;
+/* Canvases must not be sized while the tab is hidden (clientWidth is 0); mark dirty and redraw when the tab is shown. */
+function drawStateVisuals() {
+  if (!rendered.has('state')) return;
+  const tab = $('#tab-state'); if (!tab || !tab.classList.contains('on')) { STATE_DIRTY = true; return; }
+  STATE_DIRTY = false; safe(drawRegime); if (BR && STATE_SEL) safe(() => paintFan(STATE_SEL));
+}
 function drawStateAll(d) {
   safe(drawGlance, d);
   if (!STATE_SEL) { const ext = STATE_DEF.find((x) => { const st = stateNow(STATE_ASSET, x[0]); return st && (st.q === 'top' || st.q === 'bottom'); }); STATE_SEL = ext ? ext[0] : 'funding'; $$('.tile', $('#glance-box')).forEach((t) => t.classList.toggle('sel', t.dataset.key === STATE_SEL)); }
@@ -1739,10 +1797,10 @@ function renderStateTab(d) {
   boxes.forEach((b) => { if (b) b.innerHTML = '<div class="empty">Loading base rates…</div>'; });
   const seg = $('#state-asset'); if (seg && !seg.dataset.bound) { seg.dataset.bound = '1'; segBind(seg, 'a', (v) => { STATE_ASSET = v; STATE_SEL = null; if (BR) drawStateAll(d); }); }
   const rg = $('#regime-range'); if (rg && !rg.dataset.bound) { rg.dataset.bound = '1'; segBind(rg, 'd', (v) => { REGIME_DAYS = +v; safe(drawRegime); }); }
-  const rc = $('#regime-canvas'); if (rc && !rc.dataset.bound) { rc.dataset.bound = '1'; rc.addEventListener('mousemove', regimeHover); rc.addEventListener('mouseleave', () => { const t = $('#regime-tip'); if (t) t.style.display = 'none'; }); }
+  const rc = $('#regime-canvas'); if (rc && !rc.dataset.bound) { rc.dataset.bound = '1'; rc.addEventListener('mousemove', regimeHover); rc.addEventListener('mouseleave', () => { const t = $('#regime-tip'); if (t) t.style.display = 'none'; }); const touch = (e) => { if (e.touches && e.touches[0]) regimeHover({ currentTarget: rc, clientX: e.touches[0].clientX, clientY: e.touches[0].clientY }); }; rc.addEventListener('touchstart', touch, { passive: true }); rc.addEventListener('touchmove', touch, { passive: true }); }
   if (!window._stateResize) { window._stateResize = true; let tmr; window.addEventListener('resize', () => { clearTimeout(tmr); tmr = setTimeout(drawStateVisuals, 150); }); }
   loadBaseRates().then(() => {
-    if (BR_ERR) { boxes.forEach((b) => { if (b) b.innerHTML = '<div class="empty">base_rates.json did not load (' + esc(BR_ERR) + '). The readings themselves are on the Overview and Derivatives tabs.</div>'; }); return; }
+    if (BR_ERR) { boxes.forEach((b) => { if (b) b.innerHTML = '<div class="empty">base_rates.json did not load (' + esc(BR_ERR) + '). The readings themselves are on the Overview and Derivatives tabs.</div>'; }); safe(drawRegime); safe(drawTD, d); return; }
     drawStateAll(d);
   });
 }
@@ -1764,6 +1822,7 @@ function showTab(name) {
   $$('.tab').forEach((t) => t.classList.toggle('on', t.id === 'tab-' + name));
   $$('nav.tabs a').forEach((a) => { if (a.dataset.tab === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   if (DATA && !rendered.has(name)) { rendered.add(name); TABS[name].forEach((fn) => safe(fn, DATA)); }
+  else if (name === 'state' && typeof STATE_DIRTY !== 'undefined' && STATE_DIRTY) drawStateVisuals();
 }
 window.addEventListener('hashchange', () => showTab(location.hash.slice(1)));
 
