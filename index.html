@@ -90,12 +90,28 @@
   section h2 { font-size: 16px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
   section .lead { color: var(--text-2); font-size: 13px; margin: 2px 0 14px; max-width: 80ch; }
   /* State tab */
-  .state-list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-  .srow { display: grid; grid-template-columns: 1.3fr 1fr 1.15fr 1fr 1.7fr 1.25fr 0.55fr 0.9fr; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); font-size: 13px; align-items: center; }
-  .srow > div { min-width: 0; }
-  .srow.head { color: var(--text-3); font-size: 11px; padding: 8px 12px 6px; }
+  .glance { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .tile { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; color: var(--text); font: inherit; display: flex; flex-direction: column; gap: 6px; }
+  .tile:hover { border-color: var(--text-3); }
+  .tile.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .t-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .t-name { font-weight: 600; font-size: 13px; } .t-val { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+  .fifths { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; height: 9px; margin: 2px 0; }
+  .fifths i { display: block; border-radius: 2px; background: var(--line); }
+  .fifths i.bottom { background: var(--cold); opacity: 0.35; } .fifths i.top { background: var(--hot); opacity: 0.35; }
+  .fifths i.low { background: color-mix(in srgb, var(--cold) 45%, var(--surface)); opacity: 0.5; } .fifths i.high { background: color-mix(in srgb, var(--hot) 45%, var(--surface)); opacity: 0.5; }
+  .fifths i.mid { background: var(--text-3); opacity: 0.3; }
+  .fifths i.on { opacity: 1; outline: 2px solid var(--text); outline-offset: 1px; }
+  .t-state, .t-next { font-size: 12px; color: var(--text-2); } .t-state b { color: var(--text); font-weight: 600; }
+  .t-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .regime-wrap, .fan-wrap { position: relative; width: 100%; }
+  .regime-wrap canvas, .fan-wrap canvas { display: block; width: 100%; }
+  .regime-tip { position: absolute; pointer-events: none; background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 11px; line-height: 1.5; color: var(--text-2); display: none; white-space: nowrap; z-index: 2; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+  .regime-tip b { color: var(--text); }
+  .legend-q { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--text-3); margin-top: 8px; }
+  .legend-q i { display: inline-block; width: 12px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   .small { font-size: 11px; }
-  .sdet { border-bottom: 1px solid var(--line-soft); padding: 0 12px 8px; font-size: 12px; background: var(--raised); }
+  .sdet { padding: 6px 0 0; font-size: 12px; }
   .sdet summary { cursor: pointer; color: var(--text-3); font-size: 12px; padding: 4px 0 6px; }
   .agree { font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--text-2); white-space: nowrap; }
   .agree.consistent { border-color: var(--up); color: var(--up); }
@@ -104,7 +120,7 @@
   .tdgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
   .tdcell { border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px; }
   .tdcell .big { font-size: 20px; margin: 4px 0 6px; }
-  @media (max-width: 960px) { .srow { grid-template-columns: 1fr 1fr; } .srow.head { display: none; } .srow > div::before { content: attr(data-l); display: block; font-size: 11px; color: var(--text-3); } .srow > div:first-child { grid-column: 1 / -1; } .srow > div:first-child::before { display: none; } }
+  .card .foot, .tdcell .foot { display: block; border-top: 0; padding-top: 0; }
   section.empty-sec { display: none; }
   .pending { margin-top: 20px; padding: 10px 14px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--text-3); font-size: 12px; }
   .pending:empty { display: none; }
@@ -313,10 +329,18 @@
   <!-- ================= STATE ================= -->
   <div class="tab" id="tab-state">
     <section id="sec-state">
-      <header><h2>Where each reading sits, and what followed from here</h2><span class="age" id="age-state"></span></header>
-      <p class="lead">Each derivatives and positioning reading is placed in its own trailing year and bucketed into fifths. The right-hand columns say what the coin did over the following 30 days on past days in the same fifth, 2019 to today, with the number of independent episodes behind the number. This is the record, not a forecast: three pre-registered research passes found no reading that times BTC or ETH, and the tab exists so a reading can be understood in context rather than reacted to.</p>
+      <header><h2>Where each reading sits</h2><span class="age" id="age-state"></span></header>
+      <p class="lead">Each reading placed in its own trailing year and split into fifths, cold at the bottom, hot at the top. Under it: what the coin did over the next 30 days on past days in the same fifth, since 2019. Click a tile for the full path and the per-period record. This is the record, not a forecast: three pre-registered research passes found no reading that times BTC or ETH.</p>
       <div class="controls"><div class="seg" id="state-asset"><button data-a="btc" aria-pressed="true">BTC</button><button data-a="eth">ETH</button></div></div>
-      <div id="state-box"></div>
+      <div class="glance" id="glance-box"></div>
+      <div id="state-detail" style="margin-top:12px"></div>
+    </section>
+
+    <section id="sec-regime">
+      <header><h2>Regime map</h2></header>
+      <p class="lead">Price on top with TD9 completions marked. Below it, one strip per reading, cold to hot by fifth of its trailing year. The last row marks the days that were followed by a 10% drop within 30 days, so the eye can check whether the hot stretches came before them. Hover for the date.</p>
+      <div class="controls"><div class="seg" id="regime-range"><button data-d="365">1Y</button><button data-d="730" aria-pressed="true">2Y</button><button data-d="0">All</button></div></div>
+      <div class="card" style="padding:10px 12px"><div class="regime-wrap"><canvas id="regime-canvas"></canvas><div class="regime-tip" id="regime-tip"></div></div><div class="legend-q" id="regime-legend"></div></div>
     </section>
 
     <section id="sec-crowd">
@@ -1375,11 +1399,12 @@ function renderLiveBox(d) {
   $('#live-box').innerHTML = '<h3 class="sub-h">Live feed</h3>' + table([['Field', ''], ['Value', '']], [['as_of', esc(L.as_of)], ['daemon heartbeat', esc(h.daemon_heartbeat)], ['API calls last hour', esc(h.api_calls_last_hour)], ['stale flag', esc(String(h.stale))], ['relative strength board as of', esc(L.relative_strength && L.relative_strength.as_of)], ['note', esc(h.note || '')]]);
 }
 
-/* ---------- State tab: where each reading sits and what historically followed. Base rates, not forecasts. ----------
-   base_rates.json is written by research/base_rates.py in the research repo from the 2019-2026 panel (Laevitas options
-   and positioning, dashboard series). The live state (percentile, fifth, days in state) is computed here from the
-   daily series, so the two can drift slightly where the research panel used a longer Laevitas history. */
-let BR = null, BR_ERR = null, BR_P = null, STATE_ASSET = 'btc';
+/* ---------- State tab: where each reading sits, what followed, and the regime map. Base rates, not forecasts. ----------
+   base_rates.json is written by research/outside/harness/base_rates.py in the research repo from the 2019-2026 panel.
+   The live state (percentile, fifth, days in state), the regime strips and the "what followed" paths are computed here
+   from the daily series in data.json, so they stay current without rebuilding the table. */
+let BR = null, BR_ERR = null, BR_P = null, STATE_ASSET = 'btc', STATE_SEL = null, REGIME_DAYS = 730, REGIME_GEO = null;
+const STATE_CACHE = {};
 function loadBaseRates() {
   if (BR || BR_ERR) return Promise.resolve();
   if (!BR_P) BR_P = fetch('base_rates.json?v=' + Math.floor(Date.now() / 3600000)).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then((j) => { BR = j; }).catch((e) => { BR_ERR = String(e.message || e); });
@@ -1388,23 +1413,66 @@ function loadBaseRates() {
 const divSeries = (a, b) => (!a || !b) ? null : a.map((x, i) => isNum(x) && isNum(b[i]) && b[i] ? x / b[i] : null);
 /* [key in base_rates, label, series picker, value formatter, note] */
 const STATE_DEF = [
-  ['funding', 'Perp funding', (a) => SER.S[a + '_funding'], (v) => fmt.num(v * 100, 2) + ' bps / 8h', 'Binance perp, per funding interval'],
-  ['oi_usd', 'Open interest, USD', (a) => SER.S['oi_' + a.toUpperCase()], (v) => '$' + fmt.big(v), 'notional, so it rises with price'],
-  ['oi_coins', 'Open interest, coins', (a) => divSeries(SER.S['oi_' + a.toUpperCase()], SER.S[a]), (v, a) => fmt.big(v) + ' ' + a.toUpperCase(), 'USD open interest over price'],
-  ['basis', 'Futures basis', (a) => SER.S['basis_' + a], (v) => fmt.num(v, 1) + '% ann.', 'futures over spot, annualized'],
-  ['lsr', 'Long/short ratio', (a) => SER.S['lsr_' + a.toUpperCase()], (v) => fmt.num(v, 2), 'accounts long over accounts short'],
-  ['dvol', 'DVOL', (a) => SER.S['dvol_' + a], (v) => fmt.num(v, 1), 'Deribit implied volatility index'],
-  ['skew30', '25-delta skew, 30d', (a) => SER.S['skew_' + a], (v) => fmt.num(v, 1) + ' pts', 'put vol over call vol'],
-  ['ivrv30', 'Implied / realized vol', (a) => divSeries(SER.S['atm_iv_' + a], SER.S['rv_' + a]), (v) => fmt.num(v, 2) + 'x', '30d ATM implied over 30d realized'],
-  ['price', 'Price itself', (a) => SER.S[a], (v) => '$' + fmt.usd(v), 'the control: the same table for price alone'],
+  ['funding', 'Perp funding', 'Funding', (a) => SER.S[a + '_funding'], (v) => fmt.num(v * 100, 2) + ' bps / 8h', 'Binance perp, per funding interval'],
+  ['oi_usd', 'Open interest, USD', 'OI, USD', (a) => SER.S['oi_' + a.toUpperCase()], (v) => '$' + fmt.big(v), 'notional, so it rises with price'],
+  ['oi_coins', 'Open interest, coins', 'OI, coins', (a) => divSeries(SER.S['oi_' + a.toUpperCase()], SER.S[a]), (v, a) => fmt.big(v) + ' ' + a.toUpperCase(), 'USD open interest over price'],
+  ['basis', 'Futures basis', 'Basis', (a) => SER.S['basis_' + a], (v) => fmt.num(v, 1) + '% ann.', 'futures over spot, annualized'],
+  ['lsr', 'Long/short ratio', 'Long/short', (a) => SER.S['lsr_' + a.toUpperCase()], (v) => fmt.num(v, 2), 'accounts long over accounts short'],
+  ['dvol', 'DVOL', 'DVOL', (a) => SER.S['dvol_' + a], (v) => fmt.num(v, 1), 'Deribit implied volatility index'],
+  ['skew30', '25-delta skew, 30d', 'Skew 30d', (a) => SER.S['skew_' + a], (v) => fmt.num(v, 1) + ' pts', 'put vol over call vol'],
+  ['ivrv30', 'Implied / realized vol', 'IV / RV', (a) => divSeries(SER.S['atm_iv_' + a], SER.S['rv_' + a]), (v) => fmt.num(v, 2) + 'x', '30d ATM implied over 30d realized'],
+  ['price', 'Price itself', 'Price', (a) => SER.S[a], (v) => '$' + fmt.usd(v), 'the control: the same record for price alone'],
 ];
 const QL = ['bottom', 'low', 'mid', 'high', 'top'];
 function pctAt(arr, i) { if (!arr || i < 0 || !isNum(arr[i])) return null; const w = arr.slice(Math.max(0, i - 364), i + 1).filter(isNum); if (w.length < 180) return null; let c = 0; for (const v of w) if (v <= arr[i]) c++; return c / w.length; }
 const quint = (p) => isNum(p) ? QL[Math.min(4, Math.floor(p / 0.2))] : null;
-function stateOf(arr) {
-  const i = lastIdx(arr); const p = pctAt(arr, i); const q = quint(p); if (!q) return null;
-  let days = 1; for (let k = i - 1; k >= 0 && days < 400; k--) { if (quint(pctAt(arr, k)) !== q) break; days++; }
-  return { i, value: arr[i], pct: p, q, days, date: SER.dates[i] };
+/* Percentile and fifth for every day of a reading, computed once per asset and reading. */
+function stateSeries(a, key) {
+  const c = (STATE_CACHE[a] = STATE_CACHE[a] || {});
+  if (key in c) return c[key];
+  const def = STATE_DEF.find((d) => d[0] === key); const arr = def ? def[3](a) : null;
+  if (!arr || !arr.some(isNum)) return (c[key] = null);
+  const pct = arr.map((_, i) => pctAt(arr, i));
+  return (c[key] = { arr, pct, q: pct.map(quint) });
+}
+function stateNow(a, key) {
+  const s = stateSeries(a, key); if (!s) return null;
+  const i = lastIdx(s.arr); const qn = s.q[i]; if (!qn) return null;
+  let days = 1; for (let k = i - 1; k >= 0 && days < 400; k--) { if (s.q[k] !== qn) break; days++; }
+  return { i, value: s.arr[i], pct: s.pct[i], q: qn, days, date: SER.dates[i] };
+}
+/* Days that were followed by a 10% close-to-close drop within 30 days: true / false / null (not enough future). */
+function fwdDrop(a, W = 30, thr = -0.10) {
+  const c = (STATE_CACHE[a] = STATE_CACHE[a] || {}); if (c._drop) return c._drop;
+  const px = SER.S[a] || [], n = px.length, out = new Array(n).fill(null);
+  for (let t = 0; t < n; t++) {
+    if (!isNum(px[t]) || t + W >= n) continue;
+    let mn = Infinity; for (let k = 1; k <= W; k++) { const v = px[t + k]; if (isNum(v) && v < mn) mn = v; }
+    out[t] = mn < Infinity ? (mn / px[t] - 1 <= thr) : null;
+  }
+  return (c._drop = out);
+}
+/* Forward paths after past days in the same fifth (state known at the prior close, path from this close, as in the table). */
+function fanData(a, key, q, K = 60) {
+  const s = stateSeries(a, key); const px = SER.S[a] || [], n = px.length;
+  if (!s) return null;
+  const paths = [], allPaths = [], flagged = [];
+  for (let t = 1; t < n - K; t++) {
+    if (!isNum(px[t])) continue;
+    const p = new Array(K + 1); let ok = true;
+    for (let k = 0; k <= K; k++) { const v = px[t + k]; if (!isNum(v)) { ok = false; break; } p[k] = v / px[t] - 1; }
+    if (!ok) continue;
+    allPaths.push(p);
+    if (s.q[t - 1] === q) { paths.push(p); flagged.push(t); }
+  }
+  if (paths.length < 5) return null;
+  const stat = (P) => {
+    const med = [], lo = [], hi = [];
+    for (let k = 0; k <= K; k++) { const col = P.map((p) => p[k]).sort((x, y) => x - y); const m = col.length; med.push(col[Math.floor(m / 2)]); lo.push(col[Math.floor(m * 0.1)]); hi.push(col[Math.min(m - 1, Math.floor(m * 0.9))]); }
+    return { med, lo, hi };
+  };
+  let eps = 0, last = -1e9; for (const t of flagged) { if (t - last > 30) eps++; last = t; }
+  return { K, n: paths.length, eps, nAll: allPaths.length, state: stat(paths), all: stat(allPaths), since: SER.dates[flagged[0]] };
 }
 const AGREE_TXT = { consistent: 'the 30-day direction agreed in all three research periods', 'consistent-2of3': 'agreed in the two periods with enough episodes; the third had too few', mixed: 'the direction differed between periods: no stable reading', insufficient: 'too few independent episodes to compare periods' };
 const agreeChip = (s) => '<span class="agree ' + esc(s || 'insufficient') + '" title="' + esc(AGREE_TXT[s] || '') + '">' + esc(s === 'consistent-2of3' ? '2 of 3' : s || 'n/a') + '</span>';
@@ -1412,6 +1480,46 @@ const pc = (x, d = 1) => isNum(x) ? '<span class="' + cls(x) + '">' + fmt.pct(x 
 const shareTxt = (x) => isNum(x) ? Math.round(x * 100) + '%' : '–';
 const periodSpan = (p) => { const r = (BR.periods || {})[p] || []; return (r[0] || '2019') + ' to ' + (r[1] || 'now'); };
 
+/* ----- canvas helpers ----- */
+function canvasSetup(c, h) {
+  const w = Math.max(280, c.parentElement.clientWidth || 600), dpr = window.devicePixelRatio || 1;
+  c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px';
+  const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return { ctx, w, h };
+}
+function rgba(col, a) {
+  col = String(col || '').trim();
+  if (/^#/.test(col)) { let h = col.slice(1); if (h.length === 3) h = h.split('').map((x) => x + x).join(''); const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16); return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'; }
+  const m = col.match(/rgba?\(([^)]+)\)/); if (m) { const p = m[1].split(',').map((x) => x.trim()); return 'rgba(' + p[0] + ',' + p[1] + ',' + p[2] + ',' + a + ')'; }
+  return col;
+}
+function qColor(q) {
+  if (!q) return 'transparent';
+  if (q === 'mid') return rgba(css('--text-3'), 0.16);
+  const hot = q === 'top' || q === 'high';
+  return rgba(css(hot ? '--hot' : '--cold'), q === 'top' || q === 'bottom' ? 0.92 : 0.38);
+}
+
+/* ----- glance tiles ----- */
+function drawGlance() {
+  const box = $('#glance-box'), a = STATE_ASSET; const R = (BR.readings || {})[a] || {}; let html = '';
+  for (const [key, label, short, pick, fmtv, note] of STATE_DEF) {
+    const st = stateNow(a, key); const E = R[key]; const S = st && E ? E.states[st.q] : null; const P = S && S.pooled; const r30 = P && P.ret30, m = P && P.mdd30;
+    const segs = QL.map((q) => '<i class="' + q + (st && st.q === q ? ' on' : '') + '" title="' + q + ' fifth"></i>').join('');
+    html += '<button type="button" class="tile' + (STATE_SEL === key ? ' sel' : '') + '" data-key="' + key + '" title="' + esc(note) + '">' +
+      '<div class="t-head"><span class="t-name">' + esc(label) + '</span><span class="t-val">' + (st ? fmtv(st.value, a) : '–') + '</span></div>' +
+      '<div class="fifths">' + segs + '</div>' +
+      '<div class="t-state">' + (st ? '<b>' + st.q + ' fifth</b> · ' + st.days + (st.days === 1 ? ' day' : ' days') + ' · ' + ord(st.pct * 100) + ' pct of its year' : '<span class="mute">no series in data.json</span>') + '</div>' +
+      '<div class="t-next">' + (r30 ? 'next 30d ' + pc(r30.median) + ' median · 10% drop ' + shareTxt(m && m.p_le_10) + ' <span class="mute">vs ' + shareTxt(m && m.base_p_le_10) + ' on all days</span>' : '<span class="mute">no history for this state</span>') + '</div>' +
+      '<div class="t-chips">' + (S ? agreeChip(S.agreement_ret30) : '') + (r30 ? '<span class="chip">' + r30.n_ind + ' episodes</span>' : '') + (E && E.caveat ? '<span class="chip warn">caveat</span>' : '') + '</div></button>';
+  }
+  box.innerHTML = html;
+  $$('.tile', box).forEach((b) => b.addEventListener('click', () => {
+    STATE_SEL = b.dataset.key; $$('.tile', box).forEach((t) => t.classList.toggle('sel', t.dataset.key === STATE_SEL));
+    safe(() => drawFan(STATE_SEL)); const el = $('#state-detail'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }));
+}
+
+/* ----- what followed: fan chart for the selected reading ----- */
 function stateDetails(E, S) {
   const rows = [];
   const line = (name, r) => {
@@ -1420,30 +1528,112 @@ function stateDetails(E, S) {
   };
   for (const p of ['train', 'validation', 'test']) if (S.periods && S.periods[p]) rows.push(line(esc(p) + '<div class="mute small">' + esc(periodSpan(p)) + '</div>', S.periods[p]));
   if (S.pooled) rows.push(line('<b>all</b>', { ...S.pooled, rv30: null }));
-  return '<details class="sdet"><summary>By period: return against all days of the period (independent episodes in brackets) · 10% drawdown share · forward vol · research series: ' + esc(E.source || '') + ' from ' + esc(E.source_start || '?') + '</summary>' +
+  return '<details class="sdet"><summary>By research period: return against all days of the period (independent episodes in brackets) · 10% drawdown share · forward vol · research series: ' + esc(E.source || '') + ' from ' + esc(E.source_start || '?') + '</summary>' +
     table([['Period', ''], ['Days in state', 'num'], ['10d', 'num'], ['30d', 'num'], ['60d', 'num'], ['90d', 'num'], ['10% dd in 30d', 'num'], ['Fwd vol 30d', 'num']], rows) + '</details>';
 }
-function drawReadings() {
-  const box = $('#state-box'), a = STATE_ASSET; const R = (BR.readings || {})[a] || {};
-  let html = '<div class="state-list"><div class="srow head"><div>Reading</div><div>Now</div><div>In its trailing year</div><div>State · days there</div><div>Next 30 days on past days like this</div><div>10% drawdown within 30d</div><div>Episodes</div><div>Across periods</div></div>';
-  for (const [key, label, pick, fmtv, note] of STATE_DEF) {
-    const arr = pick(a); const st = arr ? stateOf(arr) : null; const E = R[key]; const S = st && E ? E.states[st.q] : null; const P = S ? S.pooled : null; const r30 = P && P.ret30, m = P && P.mdd30;
-    html += '<div class="srow"><div data-l="Reading"><b>' + esc(label) + '</b>' + (note ? '<div class="mute small">' + esc(note) + '</div>' : '') + '</div>' +
-      '<div data-l="Now">' + (st ? fmtv(st.value, a) : '<span class="mute">no series</span>') + '</div>' +
-      '<div data-l="In its trailing year">' + pctBar(st && st.pct) + '</div>' +
-      '<div data-l="State">' + (st ? '<span class="chip ' + (st.q === 'top' ? 'hot' : st.q === 'bottom' ? 'cold' : '') + '">' + st.q + ' fifth</span> <span class="mute">' + st.days + 'd</span>' : '–') + '</div>' +
-      '<div data-l="Next 30 days on past days like this">' + (r30 ? 'median ' + pc(r30.median) + ' <span class="mute">·</span> vs all days ' + pc(r30.excess) : '<span class="mute">no history for this state</span>') + '</div>' +
-      '<div data-l="10% drawdown within 30d">' + (m ? shareTxt(m.p_le_10) + ' <span class="mute">vs ' + shareTxt(m.base_p_le_10) + ' on all days</span>' : '–') + '</div>' +
-      '<div data-l="Episodes">' + (r30 ? fmt.int(r30.n_ind) : '–') + '</div>' +
-      '<div data-l="Across periods">' + (S ? agreeChip(S.agreement_ret30) : '–') + (E && E.caveat ? ' <span class="chip warn" title="' + esc(E.caveat) + '">caveat</span>' : '') + '</div></div>' +
-      (E && E.caveat ? '<div class="sdet" style="padding-top:6px"><span class="mute">Caveat: ' + esc(E.caveat) + '</span></div>' : '') + (S ? stateDetails(E, S) : '');
-  }
-  box.innerHTML = html + '</div>';
+function drawFan(key) {
+  const box = $('#state-detail'); if (!box) return; const a = STATE_ASSET; const def = STATE_DEF.find((d) => d[0] === key); const st = def ? stateNow(a, key) : null;
+  if (!st) { box.innerHTML = ''; return; }
+  const E = ((BR.readings || {})[a] || {})[key]; const S = E ? E.states[st.q] : null; const fd = fanData(a, key, st.q);
+  box.innerHTML = '<div class="card"><h3>' + a.toUpperCase() + ' after days when ' + esc(def[1].charAt(0).toLowerCase() + def[1].slice(1)) + ' was in its <span class="chip ' + (st.q === 'top' ? 'hot' : st.q === 'bottom' ? 'cold' : '') + '">' + st.q + ' fifth</span></h3>' +
+    '<div class="fan-wrap"><canvas id="fan-canvas"></canvas></div><div class="foot" id="fan-foot"></div>' +
+    (E && E.caveat ? '<div class="foot">Caveat: ' + esc(E.caveat) + '</div>' : '') + (S ? stateDetails(E, S) : '') + '</div>';
+  const foot = $('#fan-foot');
+  if (!fd) { $('.fan-wrap').style.display = 'none'; foot.textContent = 'Fewer than 5 past days in this state with 60 days of history after them.'; return; }
+  const c = $('#fan-canvas'); const { ctx, w, h } = canvasSetup(c, 230);
+  const L = 48, R = 14, T = 12, B = 26, W = w - L - R, H = h - T - B;
+  const vals = [...fd.state.lo, ...fd.state.hi, ...fd.all.med]; const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  const x = (k) => L + k / fd.K * W, y = (v) => T + H - (v - lo) / ((hi - lo) || 1) * H;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = rgba(css('--accent'), 0.16); ctx.beginPath();
+  fd.state.hi.forEach((v, k) => k ? ctx.lineTo(x(k), y(v)) : ctx.moveTo(x(k), y(v)));
+  for (let k = fd.K; k >= 0; k--) ctx.lineTo(x(k), y(fd.state.lo[k]));
+  ctx.closePath(); ctx.fill();
+  ctx.font = '11px ' + css('--font'); ctx.strokeStyle = css('--line-soft'); ctx.lineWidth = 1;
+  const ticks = [lo, lo / 2, 0, hi / 2, hi].filter((v, i, arr) => arr.indexOf(v) === i);
+  ticks.forEach((v) => { ctx.beginPath(); ctx.moveTo(L, y(v)); ctx.lineTo(L + W, y(v)); ctx.stroke(); });
+  ctx.strokeStyle = css('--text-3'); ctx.beginPath(); ctx.moveTo(L, y(0)); ctx.lineTo(L + W, y(0)); ctx.stroke();
+  ctx.setLineDash([4, 4]); ctx.strokeStyle = css('--text-3'); ctx.lineWidth = 1.2; ctx.beginPath();
+  fd.all.med.forEach((v, k) => k ? ctx.lineTo(x(k), y(v)) : ctx.moveTo(x(k), y(v))); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = css('--accent'); ctx.lineWidth = 2.2; ctx.beginPath();
+  fd.state.med.forEach((v, k) => k ? ctx.lineTo(x(k), y(v)) : ctx.moveTo(x(k), y(v))); ctx.stroke();
+  ctx.fillStyle = css('--text-3'); ctx.textAlign = 'right';
+  ticks.forEach((v) => ctx.fillText(fmt.pct(v * 100, 0), L - 5, y(v) + 4));
+  ctx.textAlign = 'center'; [0, 10, 20, 30, 40, 50, 60].forEach((k) => ctx.fillText(k ? k + 'd' : 'now', x(k), h - 8));
+  ctx.textAlign = 'left'; ctx.fillStyle = css('--text-2');
+  ctx.fillText('solid: median path in this state · band: 10th to 90th pct · dashed: median of all days', L + 4, T + 10);
+  const m30 = fd.state.med[30], a30 = fd.all.med[30], lo30 = fd.state.lo[30], hi30 = fd.state.hi[30];
+  foot.innerHTML = fd.n + ' past days in this state since ' + esc(fd.since) + ' (' + fd.eps + ' separate episodes) against ' + fd.nAll + ' days in all. At 30 days: median ' + pc(m30) + ' vs ' + pc(a30) + ' on all days; one in ten was worse than ' + pc(lo30) + ', one in ten better than ' + pc(hi30) + '. Overlapping windows: the episodes, not the days, are the sample size.';
 }
+
+/* ----- regime map: price, one strip per reading, and the drop row ----- */
+function drawRegime() {
+  const c = $('#regime-canvas'); if (!c) return;
+  const a = STATE_ASSET, px = SER.S[a] || []; if (!px.length) return;
+  const narrow = (c.parentElement.clientWidth || 600) < 560;
+  const rows = STATE_DEF.map((d) => ({ key: d[0], label: narrow ? d[2] : d[1], s: stateSeries(a, d[0]) }));
+  const end = lastIdx(px); const start = REGIME_DAYS ? Math.max(0, end - REGIME_DAYS + 1) : 0;
+  const L = narrow ? 78 : 118, R = 10, T = 8, PH = narrow ? 90 : 110, RH = 15, GAP = 8, B = 24;
+  const H = T + PH + GAP + (rows.length + 1) * RH + B;
+  const { ctx, w, h } = canvasSetup(c, H);
+  const W = w - L - R, span = Math.max(1, end - start), x = (i) => L + (i - start) / span * W, bw = Math.max(1, W / (span + 1));
+  ctx.clearRect(0, 0, w, h); ctx.font = '11px ' + css('--font');
+  const logs = []; for (let i = start; i <= end; i++) if (isNum(px[i])) logs.push(Math.log(px[i]));
+  const lo = Math.min(...logs), hi = Math.max(...logs); const y = (v) => T + PH - (Math.log(v) - lo) / ((hi - lo) || 1) * PH;
+  ctx.strokeStyle = css('--line-soft'); ctx.lineWidth = 1; [T, T + PH / 2, T + PH].forEach((Y) => { ctx.beginPath(); ctx.moveTo(L, Y); ctx.lineTo(L + W, Y); ctx.stroke(); });
+  ctx.strokeStyle = css('--accent'); ctx.lineWidth = 1.4; ctx.beginPath(); let started = false;
+  for (let i = start; i <= end; i++) { if (!isNum(px[i])) continue; const X = x(i), Y = y(px[i]); if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y); }
+  ctx.stroke();
+  const td = tdSeq(px);
+  for (const e of td.events) {
+    if (e.i < start || e.i > end || (e.t !== 'buy9' && e.t !== 'sell9')) continue;
+    const X = x(e.i), Y = y(px[e.i]), up = e.t === 'buy9'; ctx.fillStyle = css(up ? '--up' : '--down'); ctx.beginPath();
+    if (up) { ctx.moveTo(X, Y + 9); ctx.lineTo(X - 3.5, Y + 15); ctx.lineTo(X + 3.5, Y + 15); } else { ctx.moveTo(X, Y - 9); ctx.lineTo(X - 3.5, Y - 15); ctx.lineTo(X + 3.5, Y - 15); }
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = css('--text-3'); ctx.textAlign = 'right';
+  ctx.fillText('$' + fmt.int(Math.exp(hi)), L - 6, T + 10); ctx.fillText('$' + fmt.int(Math.exp(lo)), L - 6, T + PH);
+  ctx.textAlign = narrow ? 'right' : 'left'; ctx.fillStyle = css('--text-2'); ctx.fillText(a.toUpperCase() + ' price, log · ▲ TD9 buy ▼ TD9 sell', narrow ? L + W : L + 4, T + 10);
+  rows.forEach((r, ri) => {
+    const Y = T + PH + GAP + ri * RH;
+    ctx.fillStyle = css('--text-2'); ctx.textAlign = 'right'; ctx.fillText(r.label, L - 6, Y + RH - 4);
+    if (!r.s) return;
+    for (let i = start; i <= end; i++) { const q = r.s.q[i]; if (!q) continue; ctx.fillStyle = qColor(q); ctx.fillRect(x(i), Y + 2, bw + 0.7, RH - 4); }
+  });
+  const Yd = T + PH + GAP + rows.length * RH, drops = fwdDrop(a);
+  ctx.fillStyle = css('--text-2'); ctx.textAlign = 'right'; ctx.fillText(narrow ? '10% drop next' : '10% drop within 30d', L - 6, Yd + RH - 4);
+  for (let i = start; i <= end; i++) {
+    if (drops[i] === true) { ctx.fillStyle = rgba(css('--down'), 0.85); ctx.fillRect(x(i), Yd + 2, bw + 0.7, RH - 4); }
+    else if (drops[i] === false) { ctx.fillStyle = rgba(css('--text-3'), 0.12); ctx.fillRect(x(i), Yd + 2, bw + 0.7, RH - 4); }
+  }
+  ctx.fillStyle = css('--text-3'); ctx.textAlign = 'center';
+  const step = span > 1000 ? 12 : span > 450 ? (narrow ? 6 : 3) : (narrow ? 3 : 1);
+  for (let i = start; i <= end; i++) {
+    const d = SER.dates[i]; if (!d || d.slice(8, 10) !== '01') continue; const m = +d.slice(5, 7);
+    if (step === 12 && m !== 1) continue; if (step === 6 && (m - 1) % 6) continue; if (step === 3 && (m - 1) % 3) continue;
+    const X = x(i); ctx.fillRect(X, Yd + RH + 2, 1, 4); ctx.fillText(step === 12 ? d.slice(0, 4) : shortDate(d) + (m === 1 ? ' ' + d.slice(2, 4) : ''), X, Yd + RH + 16);
+  }
+  REGIME_GEO = { start, end, L, W, T, PH, GAP, RH, rows, drops, px };
+  $('#regime-legend').innerHTML = QL.map((q) => '<span><i style="background:' + qColor(q) + '"></i>' + q + ' fifth</span>').join('') + '<span><i style="background:' + rgba(css('--down'), 0.85) + '"></i>10% drop followed</span><span><i style="background:' + rgba(css('--text-3'), 0.12) + '"></i>no 10% drop</span>';
+}
+function regimeHover(ev) {
+  const g = REGIME_GEO, tip = $('#regime-tip'); if (!g || !tip) return;
+  const rect = ev.currentTarget.getBoundingClientRect(); const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+  if (mx < g.L || mx > g.L + g.W) { tip.style.display = 'none'; return; }
+  const i = Math.round(g.start + (mx - g.L) / g.W * (g.end - g.start));
+  const d = SER.dates[i]; if (!d) { tip.style.display = 'none'; return; }
+  let html = '<b>' + esc(d) + '</b> · $' + fmt.usd(g.px[i]);
+  for (const r of g.rows) { const q = r.s ? r.s.q[i] : null; const p = r.s ? r.s.pct[i] : null; html += '<br>' + esc(r.label) + ': ' + (q ? q + ' (' + ord(p * 100) + ')' : '–'); }
+  html += '<br>10% drop within 30d: ' + (g.drops[i] === true ? 'yes' : g.drops[i] === false ? 'no' : 'not yet known');
+  tip.innerHTML = html; tip.style.display = 'block';
+  const tw = tip.offsetWidth; tip.style.left = Math.min(rect.width - tw - 4, Math.max(0, mx + 12)) + 'px'; tip.style.top = Math.max(0, my - 10) + 'px';
+}
+
+/* ----- crowding cards ----- */
 function drawCrowding() {
   const box = $('#crowd-box'), a = STATE_ASSET; const R = (BR.readings || {})[a] || {};
   const active = [];
-  for (const [key, label, pick] of STATE_DEF) { if (key === 'price') continue; const arr = pick(a); const st = arr ? stateOf(arr) : null; if (st && (st.q === 'top' || st.q === 'bottom') && R[key]) active.push({ label, st, E: R[key] }); }
+  for (const [key, label] of STATE_DEF) { if (key === 'price') continue; const st = stateNow(a, key); if (st && (st.q === 'top' || st.q === 'bottom') && R[key]) active.push({ label, st, E: R[key] }); }
   let html = '<div class="card"><h3>Extreme readings now <span class="mute">top or bottom fifth of their own year</span></h3>';
   if (!active.length) html += '<div class="empty">Nothing is in its top or bottom fifth today.</div>';
   for (const x of active) {
@@ -1467,8 +1657,8 @@ function drawCrowding() {
   box.innerHTML = html;
 }
 
-/* TD Sequential on closes: 9 consecutive closes below (buy) or above (sell) the close 4 bars earlier completes a setup;
-   a countdown then counts closes at or beyond the close 2 bars earlier and completes at 13; an opposite setup cancels it. */
+/* ----- TD Sequential on closes: 9 consecutive closes below (buy) or above (sell) the close 4 bars earlier completes a setup;
+   a countdown then counts closes at or beyond the close 2 bars earlier and completes at 13; an opposite setup cancels it. ----- */
 function tdSeq(c) {
   const n = c.length, setup = new Array(n).fill(0), events = [];
   let b = 0, s = 0, cdB = null, cdS = null;
@@ -1511,11 +1701,11 @@ function tdBaseLines(tf, a) {
   return out ? '<div class="foot" style="margin-top:6px">Return vs all bars, train / validation / test (episodes). Book says buys bounce and sells fade.</div>' + out : '';
 }
 function drawTD() {
-  const box = $('#td-box'); let html = '';
+  const box = $('#td-box'); if (!box) return; let html = '';
   for (const a of ['btc', 'eth']) {
     html += '<div class="card"><h3>' + a.toUpperCase() + '</h3><div class="tdgrid">';
     for (const F of tdFrames(a)) {
-      if (F.missing) { html += '<div class="tdcell"><div class="mute small">' + esc(F.tf) + '</div><div class="empty" style="margin:6px 0 0">Hourly closes are not in live.json yet. The live daemon can publish the last 600 hours (research PR); the counts then appear here.</div></div>'; continue; }
+      if (F.missing) { html += '<div class="tdcell"><div class="mute small">' + esc(F.tf) + '</div><div class="empty" style="margin:6px 0 0">Hourly closes are not in live.json yet; the counts appear here once the live daemon publishes them.</div></div>'; continue; }
       const r = tdSeq(F.c); const n = F.c.length, s = r.setup[n - 1];
       const last = r.events.length ? r.events[r.events.length - 1] : null;
       const cnt = (side, k) => k >= 9 ? '<span class="' + (side === 'Sell' ? 'neg' : 'pos') + '">' + side + ' 9 complete</span><span class="mute"> · run at bar ' + k + '</span>' : '<span class="' + (side === 'Sell' ? 'neg' : 'pos') + '">' + side + ' ' + k + '</span><span class="mute"> of 9</span>';
@@ -1530,21 +1720,30 @@ function drawTD() {
   box.innerHTML = html;
 }
 function drawEvidence() {
-  const box = $('#evidence-box'); const g = BR.generated_from || {};
+  const box = $('#evidence-box'); if (!box) return; const g = BR.generated_from || {};
   let html = '<div class="row"><span class="l">Tables built from</span><span>daily ' + esc((g.daily || []).join(' to ')) + (g.hourly ? ' · hourly ' + esc(g.hourly.map((x) => String(x).slice(0, 10)).join(' to ')) : '') + '</span></div>' +
     '<div class="row"><span class="l">Method</span><span style="text-align:right;max-width:70%">' + esc(BR.method || '') + '</span></div>';
   for (const n of (BR.notes || [])) html += '<div class="row"><span class="l">' + esc(n.title) + '</span><span style="text-align:right;max-width:70%">' + esc(n.text) + '</span></div>';
   html += '<div class="foot">Pre-registrations, harness and full results: Hermes-Research, research/outside/ (PREREG3.md, PASS3_2026-11-19.md). A state that was followed by weak returns in the past is a base rate with its episode count, not a forecast; the research passes found no reading that passed the pre-registered rules for a signal.</div>';
   box.innerHTML = html;
 }
+function drawStateVisuals() { if (!BR || !rendered.has('state')) return; safe(drawRegime); if (STATE_SEL) safe(() => drawFan(STATE_SEL)); }
+function drawStateAll(d) {
+  safe(drawGlance, d);
+  if (!STATE_SEL) { const ext = STATE_DEF.find((x) => { const st = stateNow(STATE_ASSET, x[0]); return st && (st.q === 'top' || st.q === 'bottom'); }); STATE_SEL = ext ? ext[0] : 'funding'; $$('.tile', $('#glance-box')).forEach((t) => t.classList.toggle('sel', t.dataset.key === STATE_SEL)); }
+  safe(() => drawFan(STATE_SEL)); safe(drawRegime, d); safe(drawCrowding, d); safe(drawTD, d); safe(drawEvidence, d);
+}
 function renderStateTab(d) {
   stamp('age-state', d.panel_end);
-  const boxes = ['#state-box', '#crowd-box', '#td-box', '#evidence-box'].map((s) => $(s));
+  const boxes = ['#glance-box', '#crowd-box', '#td-box', '#evidence-box'].map((s) => $(s));
   boxes.forEach((b) => { if (b) b.innerHTML = '<div class="empty">Loading base rates…</div>'; });
-  const seg = $('#state-asset'); if (seg && !seg.dataset.bound) { seg.dataset.bound = '1'; segBind(seg, 'a', (v) => { STATE_ASSET = v; if (BR) { safe(drawReadings, d); safe(drawCrowding, d); } }); }
+  const seg = $('#state-asset'); if (seg && !seg.dataset.bound) { seg.dataset.bound = '1'; segBind(seg, 'a', (v) => { STATE_ASSET = v; STATE_SEL = null; if (BR) drawStateAll(d); }); }
+  const rg = $('#regime-range'); if (rg && !rg.dataset.bound) { rg.dataset.bound = '1'; segBind(rg, 'd', (v) => { REGIME_DAYS = +v; safe(drawRegime); }); }
+  const rc = $('#regime-canvas'); if (rc && !rc.dataset.bound) { rc.dataset.bound = '1'; rc.addEventListener('mousemove', regimeHover); rc.addEventListener('mouseleave', () => { const t = $('#regime-tip'); if (t) t.style.display = 'none'; }); }
+  if (!window._stateResize) { window._stateResize = true; let tmr; window.addEventListener('resize', () => { clearTimeout(tmr); tmr = setTimeout(drawStateVisuals, 150); }); }
   loadBaseRates().then(() => {
     if (BR_ERR) { boxes.forEach((b) => { if (b) b.innerHTML = '<div class="empty">base_rates.json did not load (' + esc(BR_ERR) + '). The readings themselves are on the Overview and Derivatives tabs.</div>'; }); return; }
-    safe(drawReadings, d); safe(drawCrowding, d); safe(drawTD, d); safe(drawEvidence, d);
+    drawStateAll(d);
   });
 }
 
@@ -1575,6 +1774,7 @@ $('#theme').addEventListener('click', () => {
   document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
   try { localStorage.setItem('heat-theme', dark ? 'light' : 'dark'); } catch (e) {}
   const t = chartTheme(); allCharts.forEach((c) => c.applyOptions(t));
+  if (typeof drawStateVisuals === 'function') drawStateVisuals();
 });
 
 /* ---------- live overlay ---------- */
