@@ -749,6 +749,22 @@ function renderNow(d) {
       '<div class="foot">' + (R.validated === true ? esc(R.note || '') : 'Not validated out of sample: context, not a signal. The four-factor score failed the three-period holdout; see the Research tab.') + '</div>' +
       '</div>';
   }
+  // Positioning watch: the one overheating reading with deeper drawdowns in train and test (outside pass 2,
+  // research/outside/OPTIONS_RISK_PASS_2026-11-18.md). A historical base rate on 11-19 episodes, not a signal.
+  const lsr = S.lsr_BTC;
+  if (lsr && lsr.some(isNum)) {
+    const li = lastIdx(lsr);
+    const win = lsr.slice(Math.max(0, li - 364), li).filter(isNum);
+    const pct = win.length >= 180 ? win.filter((v) => v <= lsr[li]).length / win.length : null;
+    const on = isNum(pct) && pct >= 0.8;
+    html += '<div class="card"><h3>Positioning watch <span class="chip' + (on ? ' warn' : '') + '">' + (on ? 'active' : 'quiet') + '</span></h3>' +
+      '<div class="big">' + (isNum(pct) ? ord(pct * 100) + ' pct' : '–') + ' <span style="font-size:14px;font-weight:400;color:var(--text-2)">BTC long/short ratio, trailing year</span></div>' +
+      '<div class="row"><span class="l">Ratio now</span><span>' + fmt.num(lsr[li], 2) + '</span></div>' +
+      '<div class="row"><span class="l">Watch level</span><span>top fifth of the year (80th pct)</span></div>' +
+      '<div class="foot">' + (on
+        ? 'Above its 80th percentile. In 2020-26, the worst point of the next 10 days was about 2 to 3 points lower than average from here, and a 10% drop within 10 days was 1.6 to 3.3 times as common; about half of such days still ended higher 20 days later. 11 to 19 episodes: a base rate, not a signal.'
+        : 'Below the watch level. Note: funding, open interest and basis at their highs did not precede deeper drawdowns in 2021-25 (they preceded shallower ones), so they are not shown as risk-off readings.') + '</div></div>';
+  }
   box.innerHTML = html;
   stamp('age-now', d.panel_end, 'close');
 }
