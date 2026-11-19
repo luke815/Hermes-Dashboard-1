@@ -89,6 +89,22 @@
   section > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
   section h2 { font-size: 16px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
   section .lead { color: var(--text-2); font-size: 13px; margin: 2px 0 14px; max-width: 80ch; }
+  /* State tab */
+  .state-list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .srow { display: grid; grid-template-columns: 1.3fr 1fr 1.15fr 1fr 1.7fr 1.25fr 0.55fr 0.9fr; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); font-size: 13px; align-items: center; }
+  .srow > div { min-width: 0; }
+  .srow.head { color: var(--text-3); font-size: 11px; padding: 8px 12px 6px; }
+  .small { font-size: 11px; }
+  .sdet { border-bottom: 1px solid var(--line-soft); padding: 0 12px 8px; font-size: 12px; background: var(--raised); }
+  .sdet summary { cursor: pointer; color: var(--text-3); font-size: 12px; padding: 4px 0 6px; }
+  .agree { font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--text-2); white-space: nowrap; }
+  .agree.consistent { border-color: var(--up); color: var(--up); }
+  .agree.consistent-2of3 { border-color: var(--warn); color: var(--warn); }
+  .agree.insufficient { border-style: dashed; color: var(--text-3); }
+  .tdgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+  .tdcell { border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px; }
+  .tdcell .big { font-size: 20px; margin: 4px 0 6px; }
+  @media (max-width: 960px) { .srow { grid-template-columns: 1fr 1fr; } .srow.head { display: none; } .srow > div::before { content: attr(data-l); display: block; font-size: 11px; color: var(--text-3); } .srow > div:first-child { grid-column: 1 / -1; } .srow > div:first-child::before { display: none; } }
   section.empty-sec { display: none; }
   .pending { margin-top: 20px; padding: 10px 14px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--text-3); font-size: 12px; }
   .pending:empty { display: none; }
@@ -244,6 +260,7 @@
 <div class="tabbar">
   <nav class="tabs" aria-label="Sections">
     <a href="#overview" data-tab="overview">Overview</a>
+    <a href="#state" data-tab="state">State</a>
     <a href="#alts" data-tab="alts">Alts</a>
     <a href="#derivatives" data-tab="derivatives">Derivatives</a>
     <a href="#research" data-tab="research">Research</a>
@@ -291,6 +308,33 @@
       <div class="pane short"><div class="ptitle"><span id="ro-fc"></span><span>Model: expected BTC return over the next 10 days. Not validated.</span></div><div class="chart" id="c-fc"></div></div>
     </section>
     <div class="pending" id="pending-overview"></div>
+  </div>
+
+  <!-- ================= STATE ================= -->
+  <div class="tab" id="tab-state">
+    <section id="sec-state">
+      <header><h2>Where each reading sits, and what followed from here</h2><span class="age" id="age-state"></span></header>
+      <p class="lead">Each derivatives and positioning reading is placed in its own trailing year and bucketed into fifths. The right-hand columns say what the coin did over the following 30 days on past days in the same fifth, 2019 to today, with the number of independent episodes behind the number. This is the record, not a forecast: three pre-registered research passes found no reading that times BTC or ETH, and the tab exists so a reading can be understood in context rather than reacted to.</p>
+      <div class="controls"><div class="seg" id="state-asset"><button data-a="btc" aria-pressed="true">BTC</button><button data-a="eth">ETH</button></div></div>
+      <div id="state-box"></div>
+    </section>
+
+    <section id="sec-crowd">
+      <header><h2>Crowding: how long, how persistent</h2></header>
+      <p class="lead">Readings in their top or bottom fifth today, how long they have been there, how long such runs usually last, and whether time already spent in the state changed what followed.</p>
+      <div class="cards" id="crowd-box"></div>
+    </section>
+
+    <section id="sec-td">
+      <header><h2>TD Sequential</h2></header>
+      <p class="lead">Setup and countdown counts on 1H, 4H, 1D and 3D bars from closes, DeMark definitions. Shown as market structure; under each count is what actually followed completions on that timeframe since 2019 (daily) or since late 2024 (hourly).</p>
+      <div class="two" id="td-box"></div>
+    </section>
+
+    <section id="sec-evidence">
+      <header><h2>Evidence and limits</h2></header>
+      <div class="card" id="evidence-box"></div>
+    </section>
   </div>
 
   <!-- ================= ALTS ================= -->
@@ -749,21 +793,22 @@ function renderNow(d) {
       '<div class="foot">' + (R.validated === true ? esc(R.note || '') : 'Not validated out of sample: context, not a signal. The four-factor score failed the three-period holdout; see the Research tab.') + '</div>' +
       '</div>';
   }
-  // Positioning watch: the one overheating reading with deeper drawdowns in train and test (outside pass 2,
-  // research/outside/OPTIONS_RISK_PASS_2026-11-18.md). A historical base rate on 11-19 episodes, not a signal.
+  // Positioning: BTC long/short ratio. Pass 2 (OPTIONS_RISK_PASS_2026-11-18.md) read its top quintile as a drawdown base
+  // rate; the pass-3 refutation (PASS3_2026-11-19.md) traced that to a 2021 level shift in the series and, since mid-2024,
+  // to the ratio rising after the price has already fallen. Shown as a reading with that context, not as a watch level.
   const lsr = S.lsr_BTC;
   if (lsr && lsr.some(isNum)) {
     const li = lastIdx(lsr);
     const win = lsr.slice(Math.max(0, li - 364), li).filter(isNum);
     const pct = win.length >= 180 ? win.filter((v) => v <= lsr[li]).length / win.length : null;
     const on = isNum(pct) && pct >= 0.8;
-    html += '<div class="card"><h3>Positioning watch <span class="chip' + (on ? ' warn' : '') + '">' + (on ? 'active' : 'quiet') + '</span></h3>' +
+    html += '<div class="card"><h3>Positioning <span class="chip">' + (on ? 'top fifth' : 'not extreme') + '</span></h3>' +
       '<div class="big">' + (isNum(pct) ? ord(pct * 100) + ' pct' : '–') + ' <span style="font-size:14px;font-weight:400;color:var(--text-2)">BTC long/short ratio, trailing year</span></div>' +
       '<div class="row"><span class="l">Ratio now</span><span>' + fmt.num(lsr[li], 2) + '</span></div>' +
-      '<div class="row"><span class="l">Watch level</span><span>top fifth of the year (80th pct)</span></div>' +
+      '<div class="row"><span class="l">BTC return, 30 days</span><span class="' + cls(retBack(S.btc, 30)) + '">' + fmt.pct(retBack(S.btc, 30), 1) + '</span></div>' +
       '<div class="foot">' + (on
-        ? 'Above its 80th percentile. In 2020-26, the worst point of the next 10 days was about 2 to 3 points lower than average from here, and a 10% drop within 10 days was 1.6 to 3.3 times as common; about half of such days still ended higher 20 days later. 11 to 19 episodes: a base rate, not a signal.'
-        : 'Below the watch level. Note: funding, open interest and basis at their highs did not precede deeper drawdowns in 2021-25 (they preceded shallower ones), so they are not shown as risk-off readings.') + '</div></div>';
+        ? 'In its top fifth. Since mid-2024 a high ratio has mostly meant the price already fell over the past month (retail adds longs into dips); the weaker returns that followed high readings come from two long episodes in late 2025 and early 2026 and are not distinguishable from chance. Context, not a warning. The State tab has the full record.'
+        : 'Not extreme. No positioning reading (funding, open interest, basis, long/short) has passed the pre-registered tests as a risk-off or risk-on signal; the State tab shows what historically followed each reading, with episode counts.') + '</div></div>';
   }
   box.innerHTML = html;
   stamp('age-now', d.panel_end, 'close');
@@ -1330,9 +1375,183 @@ function renderLiveBox(d) {
   $('#live-box').innerHTML = '<h3 class="sub-h">Live feed</h3>' + table([['Field', ''], ['Value', '']], [['as_of', esc(L.as_of)], ['daemon heartbeat', esc(h.daemon_heartbeat)], ['API calls last hour', esc(h.api_calls_last_hour)], ['stale flag', esc(String(h.stale))], ['relative strength board as of', esc(L.relative_strength && L.relative_strength.as_of)], ['note', esc(h.note || '')]]);
 }
 
+/* ---------- State tab: where each reading sits and what historically followed. Base rates, not forecasts. ----------
+   base_rates.json is written by research/base_rates.py in the research repo from the 2019-2026 panel (Laevitas options
+   and positioning, dashboard series). The live state (percentile, fifth, days in state) is computed here from the
+   daily series, so the two can drift slightly where the research panel used a longer Laevitas history. */
+let BR = null, BR_ERR = null, BR_P = null, STATE_ASSET = 'btc';
+function loadBaseRates() {
+  if (BR || BR_ERR) return Promise.resolve();
+  if (!BR_P) BR_P = fetch('base_rates.json?v=' + Math.floor(Date.now() / 3600000)).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then((j) => { BR = j; }).catch((e) => { BR_ERR = String(e.message || e); });
+  return BR_P;
+}
+const divSeries = (a, b) => (!a || !b) ? null : a.map((x, i) => isNum(x) && isNum(b[i]) && b[i] ? x / b[i] : null);
+/* [key in base_rates, label, series picker, value formatter, note] */
+const STATE_DEF = [
+  ['funding', 'Perp funding', (a) => SER.S[a + '_funding'], (v) => fmt.num(v * 100, 2) + ' bps / 8h', 'Binance perp, per funding interval'],
+  ['oi_usd', 'Open interest, USD', (a) => SER.S['oi_' + a.toUpperCase()], (v) => '$' + fmt.big(v), 'notional, so it rises with price'],
+  ['oi_coins', 'Open interest, coins', (a) => divSeries(SER.S['oi_' + a.toUpperCase()], SER.S[a]), (v, a) => fmt.big(v) + ' ' + a.toUpperCase(), 'USD open interest over price'],
+  ['basis', 'Futures basis', (a) => SER.S['basis_' + a], (v) => fmt.num(v, 1) + '% ann.', 'futures over spot, annualized'],
+  ['lsr', 'Long/short ratio', (a) => SER.S['lsr_' + a.toUpperCase()], (v) => fmt.num(v, 2), 'accounts long over accounts short'],
+  ['dvol', 'DVOL', (a) => SER.S['dvol_' + a], (v) => fmt.num(v, 1), 'Deribit implied volatility index'],
+  ['skew30', '25-delta skew, 30d', (a) => SER.S['skew_' + a], (v) => fmt.num(v, 1) + ' pts', 'put vol over call vol'],
+  ['ivrv30', 'Implied / realized vol', (a) => divSeries(SER.S['atm_iv_' + a], SER.S['rv_' + a]), (v) => fmt.num(v, 2) + 'x', '30d ATM implied over 30d realized'],
+  ['price', 'Price itself', (a) => SER.S[a], (v) => '$' + fmt.usd(v), 'the control: the same table for price alone'],
+];
+const QL = ['bottom', 'low', 'mid', 'high', 'top'];
+function pctAt(arr, i) { if (!arr || i < 0 || !isNum(arr[i])) return null; const w = arr.slice(Math.max(0, i - 364), i + 1).filter(isNum); if (w.length < 180) return null; let c = 0; for (const v of w) if (v <= arr[i]) c++; return c / w.length; }
+const quint = (p) => isNum(p) ? QL[Math.min(4, Math.floor(p / 0.2))] : null;
+function stateOf(arr) {
+  const i = lastIdx(arr); const p = pctAt(arr, i); const q = quint(p); if (!q) return null;
+  let days = 1; for (let k = i - 1; k >= 0 && days < 400; k--) { if (quint(pctAt(arr, k)) !== q) break; days++; }
+  return { i, value: arr[i], pct: p, q, days, date: SER.dates[i] };
+}
+const AGREE_TXT = { consistent: 'the 30-day direction agreed in all three research periods', 'consistent-2of3': 'agreed in the two periods with enough episodes; the third had too few', mixed: 'the direction differed between periods: no stable reading', insufficient: 'too few independent episodes to compare periods' };
+const agreeChip = (s) => '<span class="agree ' + esc(s || 'insufficient') + '" title="' + esc(AGREE_TXT[s] || '') + '">' + esc(s === 'consistent-2of3' ? '2 of 3' : s || 'n/a') + '</span>';
+const pc = (x, d = 1) => isNum(x) ? '<span class="' + cls(x) + '">' + fmt.pct(x * 100, d) + '</span>' : '–';
+const shareTxt = (x) => isNum(x) ? Math.round(x * 100) + '%' : '–';
+const periodSpan = (p) => { const r = (BR.periods || {})[p] || []; return (r[0] || '2019') + ' to ' + (r[1] || 'now'); };
+
+function stateDetails(E, S) {
+  const rows = [];
+  const line = (name, r) => {
+    const g = (h) => r['ret' + h] ? pc(r['ret' + h].excess) + ' <span class="mute">(' + r['ret' + h].n_ind + ')</span>' : '–';
+    return [name, fmt.int(r.n_days), g(10), g(30), g(60), g(90), r.mdd30 ? shareTxt(r.mdd30.p_le_10) + ' <span class="mute">vs ' + shareTxt(r.mdd30.base_p_le_10) + '</span>' : '–', r.rv30 ? fmt.int(r.rv30.flag * 100) + '% <span class="mute">vs ' + fmt.int(r.rv30.all * 100) + '%</span>' : '–'];
+  };
+  for (const p of ['train', 'validation', 'test']) if (S.periods && S.periods[p]) rows.push(line(esc(p) + '<div class="mute small">' + esc(periodSpan(p)) + '</div>', S.periods[p]));
+  if (S.pooled) rows.push(line('<b>all</b>', { ...S.pooled, rv30: null }));
+  return '<details class="sdet"><summary>By period: return against all days of the period (independent episodes in brackets) · 10% drawdown share · forward vol · research series: ' + esc(E.source || '') + ' from ' + esc(E.source_start || '?') + '</summary>' +
+    table([['Period', ''], ['Days in state', 'num'], ['10d', 'num'], ['30d', 'num'], ['60d', 'num'], ['90d', 'num'], ['10% dd in 30d', 'num'], ['Fwd vol 30d', 'num']], rows) + '</details>';
+}
+function drawReadings() {
+  const box = $('#state-box'), a = STATE_ASSET; const R = (BR.readings || {})[a] || {};
+  let html = '<div class="state-list"><div class="srow head"><div>Reading</div><div>Now</div><div>In its trailing year</div><div>State · days there</div><div>Next 30 days on past days like this</div><div>10% drawdown within 30d</div><div>Episodes</div><div>Across periods</div></div>';
+  for (const [key, label, pick, fmtv, note] of STATE_DEF) {
+    const arr = pick(a); const st = arr ? stateOf(arr) : null; const E = R[key]; const S = st && E ? E.states[st.q] : null; const P = S ? S.pooled : null; const r30 = P && P.ret30, m = P && P.mdd30;
+    html += '<div class="srow"><div data-l="Reading"><b>' + esc(label) + '</b>' + (note ? '<div class="mute small">' + esc(note) + '</div>' : '') + '</div>' +
+      '<div data-l="Now">' + (st ? fmtv(st.value, a) : '<span class="mute">no series</span>') + '</div>' +
+      '<div data-l="In its trailing year">' + pctBar(st && st.pct) + '</div>' +
+      '<div data-l="State">' + (st ? '<span class="chip ' + (st.q === 'top' ? 'hot' : st.q === 'bottom' ? 'cold' : '') + '">' + st.q + ' fifth</span> <span class="mute">' + st.days + 'd</span>' : '–') + '</div>' +
+      '<div data-l="Next 30 days on past days like this">' + (r30 ? 'median ' + pc(r30.median) + ' <span class="mute">·</span> vs all days ' + pc(r30.excess) : '<span class="mute">no history for this state</span>') + '</div>' +
+      '<div data-l="10% drawdown within 30d">' + (m ? shareTxt(m.p_le_10) + ' <span class="mute">vs ' + shareTxt(m.base_p_le_10) + ' on all days</span>' : '–') + '</div>' +
+      '<div data-l="Episodes">' + (r30 ? fmt.int(r30.n_ind) : '–') + '</div>' +
+      '<div data-l="Across periods">' + (S ? agreeChip(S.agreement_ret30) : '–') + (E && E.caveat ? ' <span class="chip warn" title="' + esc(E.caveat) + '">caveat</span>' : '') + '</div></div>' +
+      (E && E.caveat ? '<div class="sdet" style="padding-top:6px"><span class="mute">Caveat: ' + esc(E.caveat) + '</span></div>' : '') + (S ? stateDetails(E, S) : '');
+  }
+  box.innerHTML = html + '</div>';
+}
+function drawCrowding() {
+  const box = $('#crowd-box'), a = STATE_ASSET; const R = (BR.readings || {})[a] || {};
+  const active = [];
+  for (const [key, label, pick] of STATE_DEF) { if (key === 'price') continue; const arr = pick(a); const st = arr ? stateOf(arr) : null; if (st && (st.q === 'top' || st.q === 'bottom') && R[key]) active.push({ label, st, E: R[key] }); }
+  let html = '<div class="card"><h3>Extreme readings now <span class="mute">top or bottom fifth of their own year</span></h3>';
+  if (!active.length) html += '<div class="empty">Nothing is in its top or bottom fifth today.</div>';
+  for (const x of active) {
+    const runs = x.E.top_quintile_runs || {}, per = x.E.persistence || {};
+    const still = x.st.q === 'top' ? per.top_still_top_after_14d : per.bottom_still_bottom_after_14d;
+    html += '<div class="row"><span class="l">' + esc(x.label) + ' <span class="chip ' + (x.st.q === 'top' ? 'hot' : 'cold') + '">' + x.st.q + '</span></span><span style="text-align:right">' + x.st.days + ' days' +
+      (x.st.q === 'top' && isNum(runs.median_days) ? '<div class="mute small">top runs typically ' + fmt.int(runs.median_days) + ' days, ' + fmt.int(runs.p90_days) + ' at the 90th pct, ' + runs.n_runs + ' runs</div>' : '') +
+      (isNum(still) ? '<div class="mute small">still ' + x.st.q + ' two weeks later ' + shareTxt(still) + ' of the time</div>' : '') + '</span></div>';
+  }
+  html += '</div>';
+  for (const key of ['funding', 'oi_usd', 'basis', 'lsr']) {
+    const E = R[key]; if (!E || !E.top_quintile_duration) continue; const def = STATE_DEF.find((x) => x[0] === key);
+    const rows = Object.entries(E.top_quintile_duration).map(([b, v]) => {
+      const all = v.pooled || {}, va = v.validation || {};
+      return [esc(b) + ' days', isNum(all.n_ind) ? fmt.int(all.n_ind) : '<span class="mute">' + (all.n_days || 0) + ' days</span>', pc(all.ret30_excess), isNum(all.p_le_10) ? shareTxt(all.p_le_10) : '–', pc(va.ret30_excess), isNum(va.p_le_10) ? shareTxt(va.p_le_10) + ' <span class="mute">(' + (va.n_ind ?? 0) + ')</span>' : '–'];
+    });
+    html += '<div class="card"><h3>' + esc(def[1]) + ' in its top fifth <span class="mute">by days already spent there</span></h3>' +
+      table([['Days in state', ''], ['Episodes', 'num'], ['30d vs all, all data', 'num'], ['10% dd, all data', 'num'], ['30d vs all, 2024-25', 'num'], ['10% dd, 2024-25', 'num']], rows) +
+      '<div class="foot">Consecutive days in the top fifth, outcome over the following 30 days. Rows with a handful of episodes describe a handful of episodes.</div></div>';
+  }
+  box.innerHTML = html;
+}
+
+/* TD Sequential on closes: 9 consecutive closes below (buy) or above (sell) the close 4 bars earlier completes a setup;
+   a countdown then counts closes at or beyond the close 2 bars earlier and completes at 13; an opposite setup cancels it. */
+function tdSeq(c) {
+  const n = c.length, setup = new Array(n).fill(0), events = [];
+  let b = 0, s = 0, cdB = null, cdS = null;
+  for (let i = 0; i < n; i++) {
+    if (i < 4 || !isNum(c[i]) || !isNum(c[i - 4])) { b = 0; s = 0; continue; }
+    if (c[i] < c[i - 4]) { b++; s = 0; } else if (c[i] > c[i - 4]) { s++; b = 0; } else { b = 0; s = 0; }
+    setup[i] = s ? s : -b;
+    if (b === 9) { events.push({ i, t: 'buy9' }); cdB = 0; cdS = null; }
+    if (s === 9) { events.push({ i, t: 'sell9' }); cdS = 0; cdB = null; }
+    if (cdB !== null && i >= 2 && isNum(c[i - 2]) && c[i] <= c[i - 2]) { cdB++; if (cdB === 13) { events.push({ i, t: 'buy13' }); cdB = null; } }
+    if (cdS !== null && i >= 2 && isNum(c[i - 2]) && c[i] >= c[i - 2]) { cdS++; if (cdS === 13) { events.push({ i, t: 'sell13' }); cdS = null; } }
+  }
+  return { setup, events, cdBuy: cdB, cdSell: cdS };
+}
+function tdFrames(a) {
+  const daily = SER.S[a] || [], dates = SER.dates, frames = [];
+  const idx = []; daily.forEach((v, i) => { if (isNum(v)) idx.push(i); });
+  frames.push({ tf: '1D', c: idx.map((i) => daily[i]), t: idx.map((i) => dates[i]), bar: 'day' });
+  const n = idx.length, i3 = idx.filter((_, k) => (n - 1 - k) % 3 === 0);
+  frames.push({ tf: '3D', c: i3.map((i) => daily[i]), t: i3.map((i) => dates[i]), bar: '3-day bar' });
+  const H = DATA && DATA.live && DATA.live.hourly_closes && DATA.live.hourly_closes[a.toUpperCase()];
+  if (H && Array.isArray(H.c) && H.c.length > 40) {
+    const iso = (x) => new Date(x * 1000).toISOString().slice(0, 16).replace('T', ' ') + 'Z';
+    const g = new Map(); H.t.forEach((x, k) => { if (isNum(H.c[k])) g.set(Math.floor(x / 14400), { c: H.c[k], t: Math.floor(x / 14400) * 14400 }); });
+    const b4 = [...g.values()];
+    frames.push({ tf: '4H', c: b4.map((x) => x.c), t: b4.map((x) => iso(x.t)), bar: '4-hour bar' });
+    frames.push({ tf: '1H', c: H.c, t: H.t.map(iso), bar: 'hour' });
+  } else frames.push({ tf: '4H and 1H', missing: true });
+  return frames;
+}
+const TD_LABEL = { buy9: 'buy setup 9', sell9: 'sell setup 9', buy13: 'buy countdown 13', sell13: 'sell countdown 13' };
+function tdBaseLines(tf, a) {
+  const B = BR.td && BR.td[tf] && BR.td[tf][a]; if (!B) return '';
+  let out = '';
+  for (const f of ['buy9', 'sell9', 'buy13', 'sell13']) {
+    const s = B[f]; if (!s || !s.h10_train && !s.h10_validation && !s.h10_test) continue;
+    const per = ['train', 'validation', 'test'].map((p) => s['h10_' + p] ? pc(s['h10_' + p].excess) + '<span class="mute">(' + s['h10_' + p].n_ind + ')</span>' : '<span class="mute">–</span>').join(' / ');
+    out += '<div class="row"><span class="l">after a ' + esc(TD_LABEL[f]) + ', 10 bars later</span><span>' + per + ' ' + agreeChip(s.agreement_h10) + '</span></div>';
+  }
+  return out ? '<div class="foot" style="margin-top:6px">Return vs all bars, train / validation / test (episodes). Book says buys bounce and sells fade.</div>' + out : '';
+}
+function drawTD() {
+  const box = $('#td-box'); let html = '';
+  for (const a of ['btc', 'eth']) {
+    html += '<div class="card"><h3>' + a.toUpperCase() + '</h3><div class="tdgrid">';
+    for (const F of tdFrames(a)) {
+      if (F.missing) { html += '<div class="tdcell"><div class="mute small">' + esc(F.tf) + '</div><div class="empty" style="margin:6px 0 0">Hourly closes are not in live.json yet. The live daemon can publish the last 600 hours (research PR); the counts then appear here.</div></div>'; continue; }
+      const r = tdSeq(F.c); const n = F.c.length, s = r.setup[n - 1];
+      const last = r.events.length ? r.events[r.events.length - 1] : null;
+      const cnt = (side, k) => k >= 9 ? '<span class="' + (side === 'Sell' ? 'neg' : 'pos') + '">' + side + ' 9 complete</span><span class="mute"> · run at bar ' + k + '</span>' : '<span class="' + (side === 'Sell' ? 'neg' : 'pos') + '">' + side + ' ' + k + '</span><span class="mute"> of 9</span>';
+      const cur = s > 0 ? cnt('Sell', s) : s < 0 ? cnt('Buy', -s) : '<span class="mute">no count</span>';
+      const cd = r.cdBuy !== null ? '<div class="row"><span class="l">buy countdown</span><span>' + r.cdBuy + ' / 13</span></div>' : r.cdSell !== null ? '<div class="row"><span class="l">sell countdown</span><span>' + r.cdSell + ' / 13</span></div>' : '';
+      html += '<div class="tdcell"><div class="mute small">' + esc(F.tf) + ' <span class="mute">· ' + esc(F.t[n - 1]) + '</span></div><div class="big">' + cur + '</div>' + cd +
+        (last ? '<div class="row"><span class="l">last completion</span><span>' + esc(TD_LABEL[last.t]) + ' <span class="mute">' + (n - 1 - last.i) + ' ' + esc(F.bar) + 's ago</span></span></div>' : '') +
+        tdBaseLines(F.tf, a) + '</div>';
+    }
+    html += '</div></div>';
+  }
+  box.innerHTML = html;
+}
+function drawEvidence() {
+  const box = $('#evidence-box'); const g = BR.generated_from || {};
+  let html = '<div class="row"><span class="l">Tables built from</span><span>daily ' + esc((g.daily || []).join(' to ')) + (g.hourly ? ' · hourly ' + esc(g.hourly.map((x) => String(x).slice(0, 10)).join(' to ')) : '') + '</span></div>' +
+    '<div class="row"><span class="l">Method</span><span style="text-align:right;max-width:70%">' + esc(BR.method || '') + '</span></div>';
+  for (const n of (BR.notes || [])) html += '<div class="row"><span class="l">' + esc(n.title) + '</span><span style="text-align:right;max-width:70%">' + esc(n.text) + '</span></div>';
+  html += '<div class="foot">Pre-registrations, harness and full results: Hermes-Research, research/outside/ (PREREG3.md, PASS3_2026-11-19.md). A state that was followed by weak returns in the past is a base rate with its episode count, not a forecast; the research passes found no reading that passed the pre-registered rules for a signal.</div>';
+  box.innerHTML = html;
+}
+function renderStateTab(d) {
+  stamp('age-state', d.panel_end);
+  const boxes = ['#state-box', '#crowd-box', '#td-box', '#evidence-box'].map((s) => $(s));
+  boxes.forEach((b) => { if (b) b.innerHTML = '<div class="empty">Loading base rates…</div>'; });
+  const seg = $('#state-asset'); if (seg && !seg.dataset.bound) { seg.dataset.bound = '1'; segBind(seg, 'a', (v) => { STATE_ASSET = v; if (BR) { safe(drawReadings, d); safe(drawCrowding, d); } }); }
+  loadBaseRates().then(() => {
+    if (BR_ERR) { boxes.forEach((b) => { if (b) b.innerHTML = '<div class="empty">base_rates.json did not load (' + esc(BR_ERR) + '). The readings themselves are on the Overview and Derivatives tabs.</div>'; }); return; }
+    safe(drawReadings, d); safe(drawCrowding, d); safe(drawTD, d); safe(drawEvidence, d);
+  });
+}
+
 /* ---------- tabs ---------- */
 const TABS = {
   overview: [renderNow, renderSignal, renderDerivGlance, renderMovers, renderMainCharts],
+  state: [renderStateTab],
   alts: [renderRelative, renderUniverse, renderExtremes, renderIdeas, renderBook, renderPair],
   derivatives: [renderDerivs, renderDerivCharts, renderExplore],
   research: [renderResearch, renderQueue, renderSweep, renderFactors, renderLedger, renderHeatStats, renderCandidates, renderLibrary],
@@ -1381,6 +1600,7 @@ async function pollLive(d) {
     for (const k of ['watchlist', 'ideas']) if (Array.isArray(live[k]) && live[k].length) d[k] = live[k];
     if (rendered.has('alts')) { safe(renderRelative, d); safe(renderIdeas, d); safe(renderBook, d); }
     if (rendered.has('ops')) { safe(renderLiveBox, d); safe(renderFreshness, d); }
+    if (rendered.has('state') && BR && live.hourly_closes) safe(drawTD, d);
     paintLive(true, live);
   } catch (e) { paintLive(false); }
 }
