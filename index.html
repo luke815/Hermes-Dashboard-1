@@ -1437,7 +1437,12 @@ const diffN = (a, n) => !a ? null : a.map((v, i) => i >= n && isNum(v) && isNum(
 let MACRO_P = null;
 function loadMacro() {
   if (SER.S.macro_spx) return Promise.resolve();
-  if (!MACRO_P) MACRO_P = fetch('macro.json?v=' + Math.floor(Date.now() / 3600000)).then((r) => r.ok ? r.json() : null).then((j) => { if (j && j.series && j.series.macro_spx && j.series.macro_spx.length === SER.n) Object.assign(SER.S, j.series); }).catch(() => {});
+  if (!MACRO_P) MACRO_P = fetch('macro.json?v=' + Math.floor(Date.now() / 3600000)).then((r) => r.ok ? r.json() : null).then((j) => {
+    if (!j || !j.series || !Array.isArray(j.date)) return;
+    // align by date onto the panel calendar, so a panel that has grown since the file was written still works
+    const pos = new Map(j.date.map((d, i) => [d, i]));
+    for (const [k, arr] of Object.entries(j.series)) SER.S[k] = SER.dates.map((d) => { const i = pos.get(d); return i == null ? null : arr[i]; });
+  }).catch(() => {});
   return MACRO_P;
 }
 const ALTS18 = ['BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'LINK', 'APT', 'BCH', 'LTC', 'NEAR', 'SUI', 'ARB', 'ATOM', 'FIL', 'OP', 'UNI'];
