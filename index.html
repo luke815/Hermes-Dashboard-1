@@ -1407,7 +1407,7 @@ let BR = null, BR_ERR = null, BR_P = null, STATE_ASSET = 'btc', STATE_SEL = null
 const STATE_CACHE = {};
 function loadBaseRates() {
   if (BR || BR_ERR) return Promise.resolve();
-  if (!BR_P) BR_P = fetch('base_rates.json?v=' + Math.floor(Date.now() / 3600000)).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then((j) => { BR = j; }).catch((e) => { BR_ERR = String(e.message || e); });
+  if (!BR_P) BR_P = fetch('base_rates.json?v=' + encodeURIComponent((DATA && DATA.generated_at) || '') + '-' + Math.floor(Date.now() / 3600000), { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then((j) => { BR = j; }).catch((e) => { BR_ERR = String(e.message || e); });
   return BR_P;
 }
 const divSeries = (a, b) => (!a || !b) ? null : a.map((x, i) => isNum(x) && isNum(b[i]) && b[i] ? x / b[i] : null);
@@ -1437,7 +1437,7 @@ const diffN = (a, n) => !a ? null : a.map((v, i) => i >= n && isNum(v) && isNum(
 let MACRO_P = null;
 function loadMacro() {
   if (SER.S.macro_spx) return Promise.resolve();
-  if (!MACRO_P) MACRO_P = fetch('macro.json?v=' + Math.floor(Date.now() / 3600000)).then((r) => r.ok ? r.json() : null).then((j) => {
+  if (!MACRO_P) MACRO_P = fetch('macro.json?v=' + encodeURIComponent((DATA && DATA.generated_at) || '') + '-' + Math.floor(Date.now() / 3600000), { cache: 'no-cache' }).then((r) => r.ok ? r.json() : null).then((j) => {
     if (!j || !j.series || !Array.isArray(j.date)) return;
     // align by date onto the panel calendar, so a panel that has grown since the file was written still works
     const pos = new Map(j.date.map((d, i) => [d, i]));
