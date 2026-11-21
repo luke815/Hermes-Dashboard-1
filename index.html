@@ -817,22 +817,22 @@ function renderNow(d) {
       '<div class="foot">' + (R.validated === true ? esc(R.note || '') : 'Not validated out of sample: context, not a signal. The four-factor score failed the three-period holdout; see the Research tab.') + '</div>' +
       '</div>';
   }
-  // Positioning: BTC long/short ratio. Pass 2 (OPTIONS_RISK_PASS_2026-11-18.md) read its top quintile as a drawdown base
-  // rate; the pass-3 refutation (PASS3_2026-11-19.md) traced that to a 2021 level shift in the series and, since mid-2024,
-  // to the ratio rising after the price has already fallen. Shown as a reading with that context, not as a watch level.
-  const lsr = S.lsr_BTC;
-  if (lsr && lsr.some(isNum)) {
-    const li = lastIdx(lsr);
-    const win = lsr.slice(Math.max(0, li - 364), li).filter(isNum);
-    const pct = win.length >= 180 ? win.filter((v) => v <= lsr[li]).length / win.length : null;
-    const on = isNum(pct) && pct >= 0.8;
-    html += '<div class="card"><h3>Positioning <span class="chip">' + (on ? 'top fifth' : 'not extreme') + '</span></h3>' +
-      '<div class="big">' + (isNum(pct) ? ord(pct * 100) + ' pct' : '–') + ' <span style="font-size:14px;font-weight:400;color:var(--text-2)">BTC long/short ratio, trailing year</span></div>' +
-      '<div class="row"><span class="l">Ratio now</span><span>' + fmt.num(lsr[li], 2) + '</span></div>' +
-      '<div class="row"><span class="l">BTC return, 30 days</span><span class="' + cls(retBack(S.btc, 30)) + '">' + fmt.pct(retBack(S.btc, 30), 1) + '</span></div>' +
-      '<div class="foot">' + (on
-        ? 'In its top fifth. Since mid-2024 a high ratio has mostly meant the price already fell over the past month (retail adds longs into dips); the weaker returns that followed high readings come from two long episodes in late 2025 and early 2026 and are not distinguishable from chance. Context, not a warning. The State tab has the full record.'
-        : 'Not extreme. No positioning reading (funding, open interest, basis, long/short) has passed the pre-registered tests as a risk-off or risk-on signal; the State tab shows what historically followed each reading, with episode counts.') + '</div></div>';
+  // Positioning watch card. The numbers come from d.q1, which the assembler
+  // copies from the scored results file. A window below 20 episodes across
+  // train and validation is insufficient, not a signal.
+  const Q = d.q1;
+  if (Q && Array.isArray(Q.windows)) {
+    const rows = Q.windows.map((w) => [
+      esc(w.asset) + ' ' + esc(w.window) + 'd',
+      isNum(w.drawdown_effect) ? fmt.num(w.drawdown_effect, 4) : '–',
+      isNum(w.crash_lift) ? fmt.num(w.crash_lift, 2) : '–',
+      isNum(w.false_alarm) ? fmt.pct(w.false_alarm * 100, 1) : '–',
+      fmt.int(w.episodes_train_validation),
+      '<span class="status ' + esc(w.verdict) + '">' + esc(w.verdict) + '</span>',
+    ]);
+    html += '<div class="card"><h3>Positioning <span class="chip">' + esc(Q.status) + '</span></h3>' +
+      table([['Window', ''], ['Drawdown effect', 'num'], ['Crash lift', 'num'], ['False alarm', 'num'], ['Episodes', 'num'], ['Verdict', '']], rows) +
+      '<div class="foot">Read from ' + esc(Q.source) + ', ' + fmt.int(Q.names) + ' pooled names. ' + esc(Q.note || '') + '</div></div>';
   }
   box.innerHTML = html;
   stamp('age-now', d.panel_end, 'close');
