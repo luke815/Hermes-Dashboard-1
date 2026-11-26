@@ -363,6 +363,13 @@
 
   <!-- ================= ALTS ================= -->
   <div class="tab" id="tab-alts">
+    <section id="sec-ls">
+      <header><h2>Long / short board</h2><span class="age" id="age-ls"></span></header>
+      <p class="lead" id="ls-lead">A fixed rule and its full record, side by side: the strongest and weakest liquid alts against BTC over the past 30 days, with the crowded names removed. Nothing here is tuned; the history is the rule applied every Monday since the first week with a year of data, and the ledger is the live record from the week the rule went live.</p>
+      <div class="two" id="ls-lists"></div>
+      <div class="card" id="ls-record" style="margin-top:12px"></div>
+    </section>
+
     <section id="sec-rs">
       <header><h2>Relative strength board</h2><span class="age" id="age-rs"></span></header>
       <p class="lead" id="rs-lead">Every name in the live universe against the benchmark you pick. A view of what is moving, not a tested signal.</p>
@@ -830,9 +837,9 @@ function renderNow(d) {
       fmt.int(w.episodes_train_validation),
       '<span class="status ' + esc(w.verdict) + '">' + esc(w.verdict) + '</span>',
     ]);
-    html += '<div class="card"><h3>Positioning <span class="chip">' + esc(Q.status) + '</span></h3>' +
+    html += '<div class="card"><h3>Positioning <span class="chip">scored, not a watch level</span></h3>' +
       table([['Window', ''], ['Drawdown effect', 'num'], ['Crash lift', 'num'], ['False alarm', 'num'], ['Episodes', 'num'], ['Verdict', '']], rows) +
-      '<div class="foot">Read from ' + esc(Q.source) + ', ' + fmt.int(Q.names) + ' pooled names. ' + esc(Q.note || '') + '</div></div>';
+      '<div class="foot">Read from ' + esc(Q.source) + ', ' + fmt.int(Q.names) + ' pooled names. ' + esc(Q.note || '') + ' A "kept" window here means the drawdown effect kept its sign; the train effect is near zero, 2026 carries it, and a trailing-30-day-return control reproduces it (PASS3 refutation). Context, not a trigger.</div></div>';
   }
   box.innerHTML = html;
   stamp('age-now', d.panel_end, 'close');
@@ -1029,6 +1036,38 @@ function renderExtremes(d) {
 function ideaCard(x) {
   return '<div class="idea"><div class="tier">' + esc(x.tier || '–') + '</div><div><div class="head">' + esc(x.symbol) + ' <span class="side-' + esc(x.side) + '">' + esc(x.side) + '</span> <span>' + esc(x.setup || '') + (x.horizon ? ', ' + esc(x.horizon) : '') + '</span></div><div class="body">' + (x.invalidation ? 'Invalidation: ' + esc(x.invalidation) + '. ' : '') + (x.opened ? 'Fired ' + esc(x.opened) + '.' : '') + '</div></div><div class="num ' + cls(x.expected) + '">' + fmt.pct(x.expected, 1) + '<small>' + (isNum(x.hit_rate) ? Math.round(x.hit_rate * 100) + '% hit, n=' + (x.n ?? '–') : 'no record') + '</small></div></div>';
 }
+/* Long/short board: written by scripts/alt_ls_board.py (research repo) into dashboard/keys/ls_board.json, which the
+   assembler copies into data.json as ls_board; until that runs on the box, ls_board.json beside this page (an 18-alt run) is used. */
+let LS_P = null;
+function loadLsBoard(d) {
+  if (d.ls_board) return Promise.resolve(d.ls_board);
+  if (!LS_P) LS_P = fetch('ls_board.json?v=' + encodeURIComponent(d.generated_at || '') + '-' + Math.floor(Date.now() / 3600000), { cache: 'no-cache' }).then((r) => r.ok ? r.json() : null).catch(() => null);
+  return LS_P;
+}
+function renderLsBoard(d) {
+  const lists = $('#ls-lists'), rec = $('#ls-record'); if (!lists) return;
+  lists.innerHTML = '<div class="empty">Loading the board…</div>'; rec.innerHTML = '';
+  loadLsBoard(d).then((B) => {
+    if (!B) { lists.innerHTML = '<div class="empty">No board yet: scripts/alt_ls_board.py has not written ls_board.</div>'; return; }
+    stamp('age-ls', B.as_of);
+    const pc1 = (x, dgt = 1) => isNum(x) ? '<span class="' + cls(x) + '">' + fmt.pct(x, dgt) + '</span>' : '–';
+    const side = (title, rows, hint) => '<div class="card"><h3>' + title + ' <span class="mute">' + (rows.length ? rows.length + ' of ' + fmt.int(B.universe) : 'none qualify') + '</span></h3>' +
+      (rows.length ? table([['Name', ''], ['30d vs BTC', 'num'], ['7d vs BTC', 'num'], ['Funding pctl', 'num'], ['Funding', 'num'], ['OI 30d', 'num']], rows.map((r) => [
+        '<b>' + esc(r.symbol) + '</b>', pc1(r.rs30), pc1(r.rs7), isNum(r.fund_pct) ? Math.round(r.fund_pct * 100) + '%' : '–', isNum(r.fund_bps_8h) ? fmt.num(r.fund_bps_8h, 2) + ' bps' : '–', pc1(r.oi_chg30)])) : '<div class="empty">' + esc(hint) + '</div>') + '</div>';
+    const ex = B.excluded || {};
+    lists.innerHTML = side('Long candidates', B.longs || [], 'Every name in the top decile is crowded (funding percentile at or above 0.8).') + side('Short candidates', B.shorts || [], 'Every name in the bottom decile is already washed out (funding percentile at or below 0.2).');
+    const H = B.history || {}, P = H.periods || {}, L = B.ledger || {};
+    const LBL = { train: '2019 to 2024-06', validation: '2024-07 to 2025-12', test: '2026' };
+    const per = ['train', 'validation', 'test'].map((k) => { const v = P[k] || {}; return [esc(LBL[k]), fmt.int(v.weeks), isNum(v.spread_mean) ? pc1(v.spread_mean * 100, 2) + ' <span class="mute">t ' + fmt.num(v.spread_t, 1) + '</span>' : '–', isNum(v.spread_hit) ? Math.round(v.spread_hit * 100) + '%' : '–', isNum(v.long_mean) ? pc1(v.long_mean * 100, 2) + ' <span class="mute">hit ' + Math.round(v.long_hit * 100) + '%</span>' : '–', isNum(v.short_mean) ? pc1(v.short_mean * 100, 2) + ' <span class="mute">hit ' + Math.round(v.short_hit * 100) + '%</span>' : '–', isNum(v.universe_mean) ? pc1(v.universe_mean * 100, 2) : '–', isNum(v.short_vs_universe) ? pc1(v.short_vs_universe * 100, 2) : '–']; });
+    rec.innerHTML = '<h3>The rule\'s record <span class="mute">' + (H.weeks ? fmt.int(H.weeks) + ' weeks, ' + esc(H.first_week) + ' to ' + esc(H.last_week) : 'no history') + ' · ' + (B.mode === 'xs' ? 'full point-in-time universe' : '18-alt dashboard universe; the full universe appears when the script runs on the box') + '</span></h3>' +
+      '<div class="row"><span class="l">Rule</span><span style="text-align:right;max-width:70%">' + esc(B.rule || '') + '</span></div>' +
+      '<div class="row"><span class="l">Liquidity floor</span><span>' + esc(B.liquidity_floor || '') + '</span></div>' +
+      table([['Period', ''], ['Weeks', 'num'], ['Spread / week, net', 'num'], ['Spread hit', 'num'], ['Long basket vs BTC', 'num'], ['Short basket vs BTC', 'num'], ['Average alt vs BTC', 'num'], ['Short vs shorting the average', 'num']], per) +
+      '<div class="foot">Weekly rows, entry the close after the Monday close, 7-day hold, 30 bps round trip per name plus funding carry. "Average alt vs BTC" is the control: a short basket shows selection only where it beats shorting the average name. ' + (H.agreement === 'consistent' ? 'The spread had the same sign in all three periods.' : 'The spread changed sign between periods.') + '</div>' +
+      '<div class="row" style="margin-top:8px"><span class="l">Live ledger</span><span>' + (L.weeks_filled ? fmt.int(L.weeks_filled) + ' weeks filled · long hit ' + (L.long && isNum(L.long.hit) ? Math.round(L.long.hit * 100) + '%' : '–') + ' · short hit ' + (L.short && isNum(L.short.hit) ? Math.round(L.short.hit * 100) + '%' : '–') : 'started ' + esc(L.week || B.as_of) + '; first fill after the first 7-day hold') + '</span></div>' +
+      '<div class="foot">' + esc(B.note || '') + ' Pre-registration: ' + esc(B.prereg || 'research/outside/ALT_LS_PREREG.md') + '.</div>';
+  });
+}
 function renderIdeas(d) {
   const ideas = d.ideas || [], watch = d.watchlist || [];
   if (!ideas.length && !watch.length) { markEmpty('sec-ideas', 'alts', 'ideas and watchlist'); return; }
@@ -1040,6 +1079,9 @@ function renderIdeas(d) {
 }
 
 function renderBook(d) {
+  // Withdrawn 2026-11-25 (DIRECTION_2026-11-25.md): the paper book built from the sweep pipeline is down 37% since 5 Nov and
+  // its construction is under review. The ledger stays on disk; nothing is shown until that review is done.
+  markEmpty('sec-book', 'alts', 'paper book, withdrawn pending review'); return;
   const B = d.book;
   if (!B) { markEmpty('sec-book', 'alts', 'paper book'); return; }
   const st = { ...(B.stats || {}) };
@@ -1828,7 +1870,7 @@ function renderStateTab(d) {
 const TABS = {
   overview: [renderNow, renderSignal, renderDerivGlance, renderMovers, renderMainCharts],
   state: [renderStateTab],
-  alts: [renderRelative, renderUniverse, renderExtremes, renderIdeas, renderBook, renderPair],
+  alts: [renderLsBoard, renderRelative, renderUniverse, renderExtremes, renderIdeas, renderBook, renderPair],
   derivatives: [renderDerivs, renderDerivCharts, renderExplore],
   research: [renderResearch, renderQueue, renderSweep, renderFactors, renderLedger, renderHeatStats, renderCandidates, renderLibrary],
   ops: [renderFreshness, renderHealth, renderJobs, renderLiveBox],
